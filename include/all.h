@@ -11,3 +11,6 @@
 #include <stdlib.h>
 #include <mutex>
 #include <vector>
+#include <fstream>
+#include <nlohmann/json.hpp>
+#include <openssl/evp.h>

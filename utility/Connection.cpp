@@ -6,6 +6,9 @@ protected:
     int sk;
     sockaddr_in socket_info;
 
+    CryptoSym * my_cipher = nullptr;
+    CryptoSym * other_cipher = nullptr; // da considerare?
+
     status createSocket(){
         sk = socket(AF_INET, SOCK_STREAM, 0);
         if(sk < 0){
@@ -20,23 +23,20 @@ protected:
 
 public:
 
-    status sendMess(const char *buf, size_t len){
-
-        ssize_t bytes_sent =  send(sk, buf, len, MSG_NOSIGNAL);
-        if(bytes_sent <= len)
-            return status::ERROR;
-        else
-            return status::OK;
+    ssize_t sendMess(const char *buf, size_t len){
+        return send(sk, buf, len, MSG_NOSIGNAL);
     }
 
-    status recvMess(const char *buf, size_t len){
+    ssize_t recvMess(const char *buf, size_t len){
+        return recv(sk, (void*)buf, len, 0);
+    }
 
-        ssize_t bytes_recv =  recv(sk, (void*)buf, len, 0);
+    ssize_t encSend(){
+
+    }
+
+    ssize_t decRecv(){
         
-        if(bytes_recv <= len)
-            return status::ERROR;
-        else
-            return status::OK;
     }
 
 

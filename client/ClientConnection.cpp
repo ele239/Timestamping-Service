@@ -1,4 +1,5 @@
 #include "../utility/Connection.cpp"
+#include "../utility/Crypto.cpp"
 
 class ClientConnection : public Connection{
 

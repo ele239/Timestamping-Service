@@ -1,4 +1,6 @@
 #include "../utility/Connection.cpp"
+#include "../utility/CryptoSym.cpp"
+
 
 class ServerConnection : public Connection{
 
