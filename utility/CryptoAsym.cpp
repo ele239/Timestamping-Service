@@ -99,6 +99,8 @@ class CryptoAsym{
             return status::ERROR;
         }
 
+        EVP_PKEY_CTX_free(ctx);
+
         EVP_PKEY_free(my_key);         
         EVP_PKEY_free(other_key);         
 
@@ -106,7 +108,7 @@ class CryptoAsym{
         
     }
 
-    status getSessionKey(unsigned char* shared_secret, unsigned char* session_key){
+    status getSessionKey(unsigned char* shared_secret, unsigned char* session_key, unsigned char* nonces){
 
         EVP_KDF *kdf = EVP_KDF_fetch(NULL, "HKDF", NULL);
         EVP_KDF_CTX *kctx = EVP_KDF_CTX_new(kdf);
@@ -115,8 +117,8 @@ class CryptoAsym{
         *p++ = OSSL_PARAM_construct_utf8_string("digest", (char*)"SHA256", 0);
         *p++ = OSSL_PARAM_construct_octet_string("key", shared_secret, SHARED_SECRET_SIZE);
 
-        *p++ = OSSL_PARAM_construct_octet_string("salt", (unsigned char*)"tuo_salt_random_o_fisso", 23); // MERDA|||||||||||||||||||||||||||||||||||||||||||||||||||||
-        *p++ = OSSL_PARAM_construct_octet_string("info", (unsigned char*)"app_handshake", 13); //MERDA U///////////////////////////////////////7
+        *p++ = OSSL_PARAM_construct_octet_string("salt", nonces, NONCE_SIZE*2); 
+        *p++ = OSSL_PARAM_construct_octet_string("info", (unsigned char*)"SEBA_ELE_HANDSHAKE", 18);
         *p = OSSL_PARAM_construct_end();
 
         if (EVP_KDF_derive(kctx, session_key, SHARED_SECRET_SIZE, params) <= 0) {
@@ -126,13 +128,11 @@ class CryptoAsym{
 
         EVP_KDF_CTX_free(kctx);
         EVP_KDF_free(kdf);
-        OPENSSL_free(shared_secret);
+        OPENSSL_cleanse(shared_secret, SHARED_SECRET_SIZE);
 
         return status::OK;
     }
-
-
-
+    
 };
 
 #endif

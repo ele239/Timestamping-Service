@@ -2,6 +2,48 @@
 #include "client/ClientAsym.cpp"
 
 
+void th_kbd(){
+    string line; 
+
+    while(true){
+
+        char username[MAX_USERNAME_LEN];
+        char pwd[MAX_PWD_LEN];
+        
+        printf("------------- LOGIN -------------\n");
+        printf("Username: \n");
+        fgets(username, sizeof(username), stdin);
+        printf("Password: \n");
+        fgets(pwd, sizeof(pwd), stdin);
+
+        /*unsigned char username_len = ;
+        unsigned char pwd_len = pwd.length();
+        unsigned char credentials_len = username_len + pwd_len;
+        unsigned char credentials[credentials_len];*/
+        
+    
+    }
+
+    while(true){
+        cout << "Insert a valid command: \n";
+        
+        if(!getline(cin, line)){
+            printf("Error while reading the command\n");
+            continue; 
+        }
+
+        /*if(line == "balance")
+           // balance();
+        else if(line == "authentication")
+           // login();
+        else if(line == "request operation")
+           // timestamp();
+        else 
+            cout << "Invalid command inserted\n";*/
+    }
+}
+
+
 int main(int argc, char* argv[]){
 
     int port = (argc == 1) ? DEFAULT_PORT : atoi(argv[1]);
@@ -21,18 +63,8 @@ int main(int argc, char* argv[]){
         return EXIT_FAILURE;
     }
 
-    ClientAsym client_asym(&clientConn);
-    
-    unsigned char shared_secret[SHARED_SECRET_SIZE];
-    client_asym.performHandshake(shared_secret);
 
-    unsigned char message[23] = {"Mi sono rotta il cazzo"};
-
-    clientConn.symCipherInit(shared_secret);
-    clientConn.encSend(message, 23);
-
-
-
+    jthread keyboard_warrior(th_kbd);
         
     return EXIT_SUCCESS;
 }

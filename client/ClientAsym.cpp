@@ -4,6 +4,7 @@
 #include "../utility/CryptoAsym.cpp"
 #include "ClientConnection.cpp"
 
+
 class ClientAsym : public CryptoAsym{
 
     private:
@@ -58,52 +59,102 @@ class ClientAsym : public CryptoAsym{
             return outcome;
         }
 
-        status performHandshake(unsigned char* symmetric_key){
+        status performHandshake(){
 
-            EVP_PKEY* eph_key = generateEphemeralKey(); 
+            const int MAX_MESS_SIZE = NONCE_SIZE + EPH_KEY_SIZE + SIGNATURE_SIZE;
+
+            EVP_PKEY* ek_client = generateEphemeralKey(); 
             
-            unsigned char raw_key[EPH_KEY_SIZE];
-            status conversion = getRawEphimeralKey(eph_key, raw_key); 
+            unsigned char message_to_send[NONCE_SIZE + EPH_KEY_SIZE];
+            unsigned char* c_nonce = message_to_send;  
+            unsigned char* ek_client_raw = &message_to_send[NONCE_SIZE];
+            
+            status conversion = getRawEphimeralKey(ek_client, ek_client_raw); 
 
             if(conversion == status::ERROR){
                 printf("Error in generating raw ephimeral key\n");
                 return status::ERROR;
             }
+            c_conn->randomBytesGenerator(c_nonce, NONCE_SIZE);
 
-            size_t byte_sent = c_conn->sendMess(raw_key, EPH_KEY_SIZE);
+            ssize_t byte_sent = c_conn->sendMess(message_to_send, NONCE_SIZE + EPH_KEY_SIZE);
             if(byte_sent < 0){
                 printf("Error while sending the ephimeral key\n");
                 return status::ERROR;
             }
 
-            unsigned char buffer[100];
-            status outcome;
-
-            ssize_t received = c_conn->recvMess(buffer,100);
+            unsigned char buffer[MAX_MESS_SIZE];
             
+            status outcome;
+            ssize_t received = c_conn->recvMess(buffer, MAX_MESS_SIZE);
+        
             printf("PH: Ricevuti %ld byte\n",received);
 
-            if(received == 0)
+            if(received == 0){
+                printf("PH: CLOSED SOCKET\n");
                 return status::ERROR;
+            }
+
+            unsigned char message_to_verify[NONCE_SIZE*2 + EPH_KEY_SIZE*2];
+            unsigned char* ek_server_raw = &buffer[NONCE_SIZE]; 
+            
+            unsigned char* client_nonce = message_to_verify;
+            unsigned char* server_nonce = &message_to_verify[NONCE_SIZE];
+            unsigned char* c_eph_key = &message_to_verify[NONCE_SIZE*2];
+            unsigned char* s_eph_key = &message_to_verify[NONCE_SIZE*2 + EPH_KEY_SIZE];
+            
+            memcpy(client_nonce, c_nonce, NONCE_SIZE);
+            memcpy(server_nonce, buffer, NONCE_SIZE);
+            memcpy(c_eph_key, ek_client_raw, EPH_KEY_SIZE);
+            memcpy(s_eph_key, ek_server_raw, EPH_KEY_SIZE);
+            
+            
+            unsigned char* signature = &buffer[NONCE_SIZE + EPH_KEY_SIZE];
+            signature[0] ^= 0x01;
+            message_to_verify[0] ^= 0x01;
+            outcome = verifySignature(s_handshake_pubkey, message_to_verify, NONCE_SIZE*2 + EPH_KEY_SIZE*2, signature);
+            if(outcome == status::INVALID){
+                printf("The signature is invalid.\n");
+                return outcome;
+            }else if(outcome == status::ERROR){
+                printf("Error during signature verification\n");
+                return outcome;
+            }else 
+                printf("Miche la firma va\n");
+            
             
             EVP_PKEY* ek_server = nullptr;
-
-            outcome = rebuildEphimeralKey(buffer, &ek_server);
+            outcome = rebuildEphimeralKey(s_eph_key, &ek_server);
 
             if(outcome == status::ERROR){
                 printf("PH: ERRRORE IN REBUILD!\n");
                 return outcome;
             }
-            unsigned char *merduffer = new unsigned char[100];
+            
+            unsigned char shared_secret[SHARED_SECRET_SIZE];
 
-            outcome = calculateSharedSecret(eph_key, ek_server, merduffer);
+            outcome = calculateSharedSecret(ek_client, ek_server, shared_secret);
 
             if(outcome == status::ERROR){
                 printf("PH: Error in creating the shared secret!\n");
                 return outcome;
             }
+            printf("SHARED SECRET OBTAINED\n");
 
-            getSessionKey(merduffer,symmetric_key);
+
+            unsigned char* nonces = message_to_verify;
+
+            unsigned char symmetric_key[AES_KEY_SIZE];
+            outcome = getSessionKey(shared_secret, symmetric_key, nonces); 
+
+            if(outcome == status::ERROR){
+                printf("PH: ERRORE IN GET SESSION KEY!\n");
+                return outcome;
+            }
+
+            c_conn->symCipherInit(symmetric_key);
+            
+            printf("Session Key Extracted\n");
             return status::OK;
         }
 };

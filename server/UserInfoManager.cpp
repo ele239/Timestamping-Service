@@ -9,6 +9,8 @@ private:
     status outcome;
     vector<UserInfo> clientListInformation;
 
+public: 
+
     int findUser(const string username){
         
         int index = -1; 
@@ -22,8 +24,6 @@ private:
 
         return index;
     }
-
-public: 
 
     UserInfoManager(){
 
@@ -65,11 +65,11 @@ public:
         string salted_psw = clientListInformation[index].salt + psw;
         char* hashed_pwd = (char*)hashManager.calculateHash(salted_psw.c_str());
 
-        char string_hash[65];
+        char string_hash[HASH_SIZE*2 + 1];
         hashManager.hashToString((unsigned char*)hashed_pwd,string_hash);
-        string_hash[64] = '\0';
+        string_hash[HASH_SIZE*2] = '\0';
 
-        bool valid_password = clientListInformation[index].password == string_hash;
+        bool valid_password = CRYPTO_memcmp(clientListInformation[index].password.data(), string_hash, HASH_SIZE * 2);
         return valid_password; 
     }
 

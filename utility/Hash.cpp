@@ -42,11 +42,11 @@ public:
         return hash_buffer;
     }
 
-    /*
     
-    void printHash(unsigned char*h){
+    /*
+    void printHash(unsigned char*h, int len){
         cout << "HASH: ";
-        for (size_t i = 0; i < 32; ++i) {
+        for (size_t i = 0; i < len; ++i) {
                 std::cout << std::hex << std::setw(2) << std::setfill('0') 
                           << static_cast<unsigned int>(h[i]);
             }

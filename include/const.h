@@ -22,13 +22,23 @@
 #define IV_SIZE 16
 #define TAG_SIZE 16
 #define MAX_CIPHERTEXT_SIZE (MAX_PLAINTEXT_SIZE + IV_SIZE + TAG_SIZE)
+#define MAX_USERNAME_LEN 30
+#define MAX_PWD_LEN 30
 
 // Key sizes
 #define EPH_KEY_SIZE 32
 #define SHARED_SECRET_SIZE 32
+#define AES_KEY_SIZE 32
 
 // signature size
 #define SIGNATURE_SIZE 64
+
+// nonce size
+#define NONCE_SIZE 32
+
+#define HASH_SIZE 32
+
+#define MAX_TRIES 3;
 
 using namespace std;
 using json = nlohmann::json;

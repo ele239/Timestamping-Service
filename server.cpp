@@ -3,29 +3,60 @@
 #include "server/ServerAsym.cpp"
 
 UserInfoManager uinfo;
+ServerAsym Server_Asymmetric_Keys;
 
 void worker(int sk){
 
     string client_username("");
+    int client_id;
 
     ServerConnection svConn(sk);
-    printf("Miche funziona\n");
+    ServerAsym s_asym(Server_Asymmetric_Keys, &svConn);
 
-    printf(":: INIZIO HANDSHAKE ::\n");
+    status outcome;
+    ssize_t bytes_counter;
 
-    ServerAsym s_asym(&svConn);
+    printf(":: NEW REQUEST ::\n");
 
-    unsigned char key[100];
+    outcome = s_asym.performHandshake();
 
-    s_asym.performHandshake(key);
+    if(outcome != status::OK){
+        printf("The handshake did not go well. Aborting the connection...\n");
+        return;
+    }
 
-    svConn.symCipherInit(key);
+    vector<unsigned char> vec_buffer(100);
+    unsigned char* buffer = vec_buffer.data();
 
-    char buffer[100];
-    memset(buffer,0,100);
-    int aa = svConn.decRecv((unsigned char*)buffer);
-    
-    printf("ricevuto %d byte, messaggio -> %.100s \n",aa,buffer);
+    unsigned char tries = MAX_TRIES;
+    while(tries){
+        bytes_counter = svConn.decRecv(buffer);
+        
+        if(bytes_counter <= 0){
+            printf("ERROR OCCURRED OR SOCKET CLOSED. ABORTING...\n");
+            return;
+        }
+
+        unsigned char username_len = buffer[0];
+        unsigned char pwd_len = buffer[1];
+
+        if(username_len >= MAX_USERNAME_LEN || pwd_len >= MAX_PWD_LEN){
+            tries--;
+            continue;
+        }
+
+        if(uinfo.checkCredentials()){
+            break;
+        }
+
+        tries--;
+    }
+    if(!tries){
+        printf("The user failed to authenticate. Aborting the connection...\n");
+        return;
+    }else
+        printf("The user \"%s\" has logged in successfully.\n",);
+
 
 }
 
