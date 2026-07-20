@@ -1,4 +1,6 @@
 #include "client/ClientConnection.cpp"
+#include "client/ClientAsym.cpp"
+
 
 int main(int argc, char* argv[]){
 
@@ -18,6 +20,19 @@ int main(int argc, char* argv[]){
         printf("Connection failed \n");
         return EXIT_FAILURE;
     }
+
+    ClientAsym client_asym(&clientConn);
+    
+    unsigned char shared_secret[SHARED_SECRET_SIZE];
+    client_asym.performHandshake(shared_secret);
+
+    unsigned char message[23] = {"Mi sono rotta il cazzo"};
+
+    clientConn.symCipherInit(shared_secret);
+    clientConn.encSend(message, 23);
+
+
+
         
     return EXIT_SUCCESS;
 }

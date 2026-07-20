@@ -1,6 +1,6 @@
 #include "server/ServerConnection.cpp"
 #include "server/UserInfoManager.cpp"
-#include "utility/CryptoSym.cpp"
+#include "server/ServerAsym.cpp"
 
 UserInfoManager uinfo;
 
@@ -10,7 +10,22 @@ void worker(int sk){
 
     ServerConnection svConn(sk);
     printf("Miche funziona\n");
+
+    printf(":: INIZIO HANDSHAKE ::\n");
+
+    ServerAsym s_asym(&svConn);
+
+    unsigned char key[100];
+
+    s_asym.performHandshake(key);
+
+    svConn.symCipherInit(key);
+
+    char buffer[100];
+    memset(buffer,0,100);
+    int aa = svConn.decRecv((unsigned char*)buffer);
     
+    printf("ricevuto %d byte, messaggio -> %.100s \n",aa,buffer);
 
 }
 
@@ -56,43 +71,6 @@ int main(int argc, char* argv[]){
         printf("Failure in loading User Info! Aborting...\n");
         return EXIT_FAILURE;
     }
-
-    /*
-    
-
-    unsigned char key[33]={"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"};
-    unsigned char iv[17]={"bbbbbbbbbbbbbbbb"};
-    
-    CryptoSym c(key);
-
-    unsigned char mess[35] = {"miche sono il bomba e sono grasso."};
-
-    unsigned char crypto[34];
-
-    unsigned char plain[35];
-
-    plain[34] = '\0';
-
-    unsigned char aad[4] = {"bem"};
-
-    unsigned char tag[16];
-
-    int cipherlen;
-    int plen;
-
-    c.encrypt(mess,34,iv,aad,3, tag,crypto,&cipherlen);
-
-    printf("Cipherlen: %d\n",cipherlen);
-
-    status culo = c.decrypt(crypto,cipherlen,iv,aad,3,tag,plain,&plen);
-
-    if(culo == status::ERROR){
-        printf("MERDA\n");
-        return -1;
-    }
-
-    printf("plen: %d, plain: %s\n", plen, (char*)plain);
-    */
 
     printf("Server is turning on -> Port: %d\n",port);
     

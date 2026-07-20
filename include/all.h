@@ -14,3 +14,6 @@
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include <openssl/evp.h>
+#include <openssl/rand.h>
+#include <openssl/pem.h>
+#include <openssl/kdf.h>

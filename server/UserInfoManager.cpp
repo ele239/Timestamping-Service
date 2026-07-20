@@ -12,7 +12,8 @@ private:
     int findUser(const string username){
         
         int index = -1; 
-        for (int i = 0; i < clientListInformation.size(); i++){
+        int num_users = clientListInformation.size();
+        for (int i = 0; i < num_users; i++){
             if(clientListInformation[i].username == username){
                 index = i; 
                 break;
@@ -80,7 +81,8 @@ public:
     } 
 
     void printa(){
-        for (int i = 0; i < clientListInformation.size(); i++){
+        int num_users = clientListInformation.size();
+        for (int i = 0; i < num_users; i++){
             UserInfo u = clientListInformation[i];
             printf("\n{\nuser: %s\nsale: %s\npwd: %s\ntime_r: %d\ntime_c: %d\n}\n",u.username.c_str(),u.salt.c_str(),u.password.c_str(),u.timestamps_remaining,u.timestamps_consumed);
         }

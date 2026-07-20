@@ -1,5 +1,8 @@
+#ifndef CLIENT_CONN
+#define CLIENT_CONN
+
 #include "../utility/Connection.cpp"
-#include "../utility/Crypto.cpp"
+#include "../utility/CryptoSym.cpp"
 
 class ClientConnection : public Connection{
 
@@ -33,3 +36,5 @@ class ClientConnection : public Connection{
         return this->createSocket();
     }
 };
+
+#endif

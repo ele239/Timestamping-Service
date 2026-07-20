@@ -1,3 +1,6 @@
+#ifndef SERVER_CONN
+#define SERVER_CONN
+
 #include "../utility/Connection.cpp"
 #include "../utility/CryptoSym.cpp"
 
@@ -54,3 +57,5 @@ public:
         
     }
 };
+
+#endif

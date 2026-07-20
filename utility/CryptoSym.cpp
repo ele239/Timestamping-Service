@@ -13,12 +13,13 @@ class CryptoSym{
 
     public:
 
-    CryptoSym(const unsigned char* key){
+    CryptoSym(unsigned char* key){
         enc_ctx = EVP_CIPHER_CTX_new();
         dec_ctx = EVP_CIPHER_CTX_new();
 
         EVP_EncryptInit(enc_ctx, EVP_aes_256_gcm(), key, nullptr);
         EVP_DecryptInit(dec_ctx, EVP_aes_256_gcm(), key, nullptr);
+        OPENSSL_cleanse((void*)key,EVP_CIPHER_key_length(EVP_aes_256_gcm()));
     }
 
     ~CryptoSym(){
@@ -33,17 +34,13 @@ class CryptoSym{
         }
     }
 
-    status encrypt(const unsigned char* plaintext, int plaintext_len, const unsigned char* iv, const unsigned char* aad,
-        int aad_len, unsigned char* tag, unsigned char* ciphertext_out, int* cipherlen_out){
+    status encrypt(const unsigned char* plaintext, int plaintext_len, const unsigned char* iv,
+        unsigned char* tag, unsigned char* ciphertext_out, int* cipherlen_out){
 
         int len;
         int ciphertext_len;
 
         EVP_EncryptInit(enc_ctx, nullptr, nullptr, iv);
-
-        if(aad && aad_len > 0){
-            EVP_EncryptUpdate(enc_ctx, nullptr, &len, aad, aad_len);
-        }
 
         EVP_EncryptUpdate(enc_ctx, ciphertext_out, &len, plaintext, plaintext_len);
         ciphertext_len = len;
@@ -60,17 +57,14 @@ class CryptoSym{
     }
     
 
-    status decrypt(const unsigned char* ciphertext, int ciphertext_len, const unsigned char* iv, const unsigned char* aad,
-        int aad_len, const unsigned char* tag, unsigned char* plaintext_out, int* plainlen_out){
+    status decrypt(const unsigned char* ciphertext, int ciphertext_len, const unsigned char* iv,
+        const unsigned char* tag, unsigned char* plaintext_out, int* plainlen_out){
 
         int len;
         int plaintext_len;
 
         EVP_DecryptInit(dec_ctx, nullptr, nullptr, iv);
 
-        if(aad && aad_len > 0){
-            EVP_DecryptUpdate(dec_ctx, nullptr, &len, aad, aad_len);
-        }
 
         EVP_DecryptUpdate(dec_ctx, plaintext_out, &len, ciphertext, ciphertext_len);
         plaintext_len = len;
