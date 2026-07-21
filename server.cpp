@@ -54,7 +54,7 @@ void worker(int sk){
         
         outcome = rm.manageRequests();
 
-        if(outcome != status::OK)
+        if(outcome == status::ERROR)
             break;
     }
 

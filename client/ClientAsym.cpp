@@ -3,6 +3,7 @@
 
 #include "../utility/CryptoAsym.cpp"
 #include "ClientConnection.cpp"
+#include "../utility/Mess.h"
 
 
 class ClientAsym : public CryptoAsym{
@@ -24,6 +25,10 @@ class ClientAsym : public CryptoAsym{
             c_conn = nullptr;
             EVP_PKEY_free(s_handshake_pubkey);
             EVP_PKEY_free(s_sign_pubkey);
+        }
+
+        EVP_PKEY * getSignPubKey(){
+            return s_sign_pubkey;
         }
 
         status verifySignature(EVP_PKEY *pub_key, const unsigned char *msg, size_t msg_len, const unsigned char *signature) {
@@ -61,32 +66,37 @@ class ClientAsym : public CryptoAsym{
 
         status performHandshake(){
 
-            const int MAX_MESS_SIZE = NONCE_SIZE + EPH_KEY_SIZE + SIGNATURE_SIZE;
+            const int MAX_MESS_SIZE = max(sizeof(ClientHello),sizeof(ServerHello));
 
+            Conversation conv;
+
+            unsigned char buffer[MAX_MESS_SIZE];
+
+            ClientHello* cl_hello = (ClientHello*) buffer;
+            ServerHello* sv_hello = (ServerHello*) buffer;
+            
             EVP_PKEY* ek_client = generateEphemeralKey(); 
-            
-            unsigned char message_to_send[NONCE_SIZE + EPH_KEY_SIZE];
-            unsigned char* c_nonce = message_to_send;  
-            unsigned char* ek_client_raw = &message_to_send[NONCE_SIZE];
-            
-            status conversion = getRawEphimeralKey(ek_client, ek_client_raw); 
+
+            status conversion = getRawEphimeralKey(ek_client, cl_hello->eph_key_raw); 
 
             if(conversion == status::ERROR){
                 printf("Error in generating raw ephimeral key\n");
                 return status::ERROR;
             }
-            c_conn->randomBytesGenerator(c_nonce, NONCE_SIZE);
+            c_conn->randomBytesGenerator(cl_hello->nonce, NONCE_SIZE);
 
-            ssize_t byte_sent = c_conn->sendMess(message_to_send, NONCE_SIZE + EPH_KEY_SIZE);
+            ssize_t byte_sent = c_conn->sendMess((unsigned char*)cl_hello, sizeof(ClientHello));
             if(byte_sent < 0){
                 printf("Error while sending the ephimeral key\n");
                 return status::ERROR;
             }
 
-            unsigned char buffer[MAX_MESS_SIZE];
-            
+            memcpy(conv.c_nonce, cl_hello->nonce, NONCE_SIZE);
+            memcpy(conv.c_eph_key_raw, cl_hello->eph_key_raw, EPH_KEY_SIZE);
+
+
             status outcome;
-            ssize_t received = c_conn->recvMess(buffer, MAX_MESS_SIZE);
+            ssize_t received = c_conn->recvMess((unsigned char*)sv_hello, sizeof(ServerHello));
         
             printf("PH: Ricevuti %ld byte\n",received);
 
@@ -94,36 +104,26 @@ class ClientAsym : public CryptoAsym{
                 printf("PH: CLOSED SOCKET\n");
                 return status::ERROR;
             }
-
-            unsigned char message_to_verify[NONCE_SIZE*2 + EPH_KEY_SIZE*2];
-            unsigned char* ek_server_raw = &buffer[NONCE_SIZE]; 
+        
+            memcpy(conv.s_nonce, sv_hello->nonce, NONCE_SIZE);
+            memcpy(conv.s_eph_key_raw, sv_hello->eph_key_raw, EPH_KEY_SIZE);
             
-            unsigned char* client_nonce = message_to_verify;
-            unsigned char* server_nonce = &message_to_verify[NONCE_SIZE];
-            unsigned char* c_eph_key = &message_to_verify[NONCE_SIZE*2];
-            unsigned char* s_eph_key = &message_to_verify[NONCE_SIZE*2 + EPH_KEY_SIZE];
+            outcome = verifySignature(s_handshake_pubkey, (unsigned char*)&conv, sizeof(Conversation), sv_hello->signature);
             
-            memcpy(client_nonce, c_nonce, NONCE_SIZE);
-            memcpy(server_nonce, buffer, NONCE_SIZE);
-            memcpy(c_eph_key, ek_client_raw, EPH_KEY_SIZE);
-            memcpy(s_eph_key, ek_server_raw, EPH_KEY_SIZE);
-            
-            
-            unsigned char* signature = &buffer[NONCE_SIZE + EPH_KEY_SIZE];
-            
-            outcome = verifySignature(s_handshake_pubkey, message_to_verify, NONCE_SIZE*2 + EPH_KEY_SIZE*2, signature);
             if(outcome == status::INVALID){
                 printf("The signature is invalid.\n");
                 return outcome;
+
             }else if(outcome == status::ERROR){
                 printf("Error during signature verification\n");
                 return outcome;
+                
             }else 
                 printf("Miche la firma va\n");
             
             
             EVP_PKEY* ek_server = nullptr;
-            outcome = rebuildEphimeralKey(s_eph_key, &ek_server);
+            outcome = rebuildEphimeralKey(conv.s_eph_key_raw, &ek_server);
 
             if(outcome == status::ERROR){
                 printf("PH: ERRRORE IN REBUILD!\n");
@@ -141,7 +141,7 @@ class ClientAsym : public CryptoAsym{
             printf("SHARED SECRET OBTAINED\n");
 
 
-            unsigned char* nonces = message_to_verify;
+            unsigned char* nonces = (unsigned char*)&conv;
 
             unsigned char symmetric_key[AES_KEY_SIZE];
             outcome = getSessionKey(shared_secret, symmetric_key, nonces); 

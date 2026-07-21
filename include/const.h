@@ -18,7 +18,7 @@
 #define SERVER_HANDSHAKE_PRIV "server/keys/server_handshake_priv.pem"
 
 // Message size
-#define MAX_PLAINTEXT_SIZE 100
+#define MAX_PLAINTEXT_SIZE 105
 #define IV_SIZE 16
 #define TAG_SIZE 16
 #define MAX_CIPHERTEXT_SIZE (MAX_PLAINTEXT_SIZE + IV_SIZE + TAG_SIZE)
@@ -43,6 +43,8 @@
 #define MAX_COMMAND_LEN 9
 
 #define MAX_PATH_LEN 150
+
+#define TS_SIZE 8
 
 using namespace std;
 using json = nlohmann::json;

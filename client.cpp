@@ -2,11 +2,12 @@
 #include "client/ClientAsym.cpp"
 #include "utility/Mess.h"
 #include "utility/DTOs.h"
+#include "utility/Hash.cpp"
 
 ClientConnection clientConn;
 ClientAsym client_asym(&clientConn);
 
-void balance(){
+status balance(){
     
     auto sendReq = [&](request req){
         u_int8_t req_raw = (unsigned char)req;
@@ -17,7 +18,7 @@ void balance(){
     status outcome = sendReq(request::BALANCE);
     if(outcome == status::ERROR){
         printf("Error while sending the balance request to the server\n");
-        return;
+        return status::ERROR;
     }
     printf("BALANCE: request correctly sent to the server\n");
 
@@ -26,33 +27,136 @@ void balance(){
     ssize_t bytes_recv = clientConn.decRecv(buffer);
     if(bytes_recv < 0){
         printf("Error occurred while recieving the balance\n");
+        return status::ERROR;
     }
     
     ResponseMess* mess = (ResponseMess*) buffer;
-    status req_status = mess->type;
-    if(req_status == status::ERROR){
+
+    if(mess->sts == status::ERROR){
         printf("Error occurred while calculating the balance\n");
-        return;
+        return status::ERROR;
     }
 
     TimestampInfo t;
     memcpy(&t, mess->payload, sizeof(t));
 
     printf("Timestamps already consumed: %d\n", t.timestamps_remaining);
-    printf("Timestamps that can still be request: %d\n", t.timestamps_consumed);
+    printf("Timestamps that can still be requested: %d\n", t.timestamps_consumed);
 
+    return status::OK;
 }
 
+unsigned char* readFromFile(char* path){
 
-void timestamp(){
+    FILE* file = fopen(path, "rb");
+    if(!file){
+        printf("Error occurred while operning the file\n");
+        return nullptr;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long dim = ftell(file);
+
+    if(dim < 0){
+        printf("Invalid file dimension\n");
+        fclose(file);
+        return nullptr;
+    }
+
+    if(dim == 0){
+        printf("File is empty\n");
+        return nullptr;
+    }
+
+    fseek(file, 0, SEEK_SET);
+    unsigned char* content = (unsigned char*)malloc(dim);
+    if(!content){
+        fclose(file);
+        return nullptr;
+    }
+
+    size_t bytes_read = fread(content, 1, dim, file);
+    if(bytes_read < dim){
+        fclose(file);
+        free(content);
+        return nullptr;
+    }
+
+    fclose(file);
+    return content;
+}
+
+status timestamp(){
     printf("Insert the path of the document that has to be signed: ");
 
     char path[MAX_PATH_LEN];
     fgets(path, MAX_PATH_LEN, stdin);
-    path[strlen(path)] = '\0';
+    path[strlen(path)-1] = '\0';
 
+    unsigned char* message = readFromFile(path);
+    if(!message){
+        printf("Error occurred while reading from file\n");
+        return status::ERROR;
+    }
 
-    //readFromFile()
+    unsigned char buffer[1 + HASH_SIZE];
+    RequestMess* req = (RequestMess*) buffer; 
+    
+    req->type = request::SIGN;
+    
+    Hash h;
+    h.calculateHash((char*)message, req->payload);
+
+    message = nullptr;
+    
+    ssize_t bytes_sent = clientConn.encSend((unsigned char*) req, HASH_SIZE + 1);
+    if(bytes_sent < 0){
+        printf("Error occurred while sending the hash of the message\n");
+        return status::ERROR;
+    }
+
+    unsigned char signature_mess[1 + HASH_SIZE + TS_SIZE + SIGNATURE_SIZE];
+    ssize_t bytes_recv = clientConn.decRecv(signature_mess);
+
+    if(bytes_recv < 0){
+        printf("Error occurred while receiving the message\n");
+        return status::ERROR;
+    }
+
+    if(bytes_recv == 0){
+        printf("The socket was closed by the server\n");
+        return status::ERROR;
+    }
+
+    SignatureMess *sig_mess = (SignatureMess*) signature_mess;
+    status outcome = sig_mess->sts;
+
+    if(outcome == status::INVALID){
+        printf("All timestamps have been used\n");
+        return status::ERROR;
+    }
+    else if(outcome == status::ERROR){
+        printf("Error occurred while receiving the signature\n");
+        return status::ERROR;
+    }
+
+    unsigned char mess_to_compare[HASH_SIZE + TS_SIZE];
+    memcpy(mess_to_compare, req->payload, HASH_SIZE);
+    memcpy(&mess_to_compare[HASH_SIZE], sig_mess->timestamp, TS_SIZE);
+    
+    outcome = client_asym.verifySignature(client_asym.getSignPubKey(), mess_to_compare, HASH_SIZE + TS_SIZE, sig_mess->signature);
+    if(outcome == status::INVALID){
+        printf("Invalid signature\n");
+        return status::ERROR;
+    }
+    else if(outcome == status::ERROR){
+        printf("Error occurred during signature verification\n");
+        return status::ERROR;
+    }
+    
+    printf("Signature created and successfully verified\n");
+    return status::OK;
+    
 }
 
 void th_kbd(){
@@ -115,16 +219,29 @@ void th_kbd(){
         
         char command[MAX_COMMAND_LEN];
         fgets(command, MAX_COMMAND_LEN, stdin);
-        command[strlen(command)] = '\0';
+        command[strlen(command)-1] = '\0';
         
-        if(strcasecmp("balance", command))
-            balance();    
-        else if(strcasecmp("sign", command))
-            timestamp();
+        status outcome;        
+        if(!strcasecmp("balance", command)){
+            outcome = balance();    
+            if(outcome == status::ERROR){
+                printf("Error while calculating the balance\n");
+                break;
+            }
+        }
+        else if(!strcasecmp("sign", command)){
+            outcome = timestamp();
+            if(outcome == status::ERROR){
+                printf("Error in the document signature\n");
+                break;
+            }
+        }
         else
             cout << "Invalid command inserted\n";
 
     }
+
+    printf("Connection with server closed.\n");
 }
 
 

@@ -5,43 +5,20 @@
 
 class Hash{
 
-private:
-    unsigned char* hash_buffer = nullptr; 
-
-
 public:
-    
-    ~Hash(){
-        if(hash_buffer){
-            free(hash_buffer);
-            hash_buffer = nullptr;
-        }
-    }
 
-    unsigned char* calculateHash(const char* message){
+    void calculateHash(const char* message, unsigned char* hash){
         
         unsigned int digest_len; 
         EVP_MD_CTX* ctx;
 
-        
-        if(!hash_buffer){
-            hash_buffer = (unsigned char*)malloc(EVP_MD_size(EVP_sha256()));
-        }
-
         ctx = EVP_MD_CTX_new();
         EVP_DigestInit(ctx, EVP_sha256());
         EVP_DigestUpdate(ctx, (unsigned char*)message, strlen(message));
-        EVP_DigestFinal(ctx, hash_buffer, &digest_len);
+        EVP_DigestFinal(ctx, hash, &digest_len);
 
         EVP_MD_CTX_free(ctx);
-
-        return hash_buffer;
     }
-
-    unsigned char* getLastHash(){
-        return hash_buffer;
-    }
-
     
     /*
     void printHash(unsigned char*h, int len){

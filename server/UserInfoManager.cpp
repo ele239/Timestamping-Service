@@ -69,14 +69,17 @@ public:
         
         Hash hashManager; 
         string salted_psw = clientListInformation[index].salt + psw;
-        char* hashed_pwd = (char*)hashManager.calculateHash(salted_psw.c_str());
+        unsigned char hashed_pwd[HASH_SIZE];
+
+        hashManager.calculateHash(salted_psw.c_str(), hashed_pwd);
 
         char string_hash[HASH_SIZE*2 + 1];
-        hashManager.hashToString((unsigned char*)hashed_pwd,string_hash);
+        hashManager.hashToString(hashed_pwd,string_hash);
         string_hash[HASH_SIZE*2] = '\0';
 
         int ret = CRYPTO_memcmp(clientListInformation[index].password.data(), string_hash, HASH_SIZE * 2);
         bool valid_password = (ret == 0);
+
         return valid_password; 
     }
 
@@ -92,6 +95,27 @@ public:
             UserInfo u = clientListInformation[i];
             printf("\n{\nuser: %s\nsale: %s\npwd: %s\ntime_r: %d\ntime_c: %d\n}\n",u.username.c_str(),u.salt.c_str(),u.password.c_str(),u.timestamps_remaining,u.timestamps_consumed);
         }
+    }
+
+    status consumeTimestamp(int index){
+
+        if(index < 0 || index >= (int)clientListInformation.size()){
+            printf("Invalid index\n");
+            return status::ERROR;
+        }
+
+        UserInfo* user = &clientListInformation[index];
+        if(user->timestamps_remaining == 0){
+            printf("No timestamp left\n");
+            return status::INVALID;
+        }
+
+        user->timestamps_remaining--; 
+        user->timestamps_consumed++;
+        printf("Timestamps correctly updated\n");
+
+        printa();
+        return status::OK;
     }
 
 };

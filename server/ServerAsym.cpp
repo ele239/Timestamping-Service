@@ -3,6 +3,7 @@
 
 #include "../utility/CryptoAsym.cpp"
 #include "ServerConnection.cpp"
+#include "../utility/Mess.h"
 
 class ServerAsym : public CryptoAsym{
     
@@ -44,6 +45,9 @@ class ServerAsym : public CryptoAsym{
         }
     }
 
+    EVP_PKEY * getSignPrivKey(){
+        return sign_privkey;
+    }
 
     status generateSignature(EVP_PKEY* sign_key,const unsigned char *message, size_t message_len, unsigned char *signature) {
         
@@ -74,23 +78,20 @@ class ServerAsym : public CryptoAsym{
 
     status performHandshake(){
 
-        const int CONVERSATION_SIZE = NONCE_SIZE * 2 + EPH_KEY_SIZE * 2;
-        const int MAX_MESS_SIZE = NONCE_SIZE + EPH_KEY_SIZE + SIGNATURE_SIZE;
+        const int MAX_MESS_SIZE = max(sizeof(ClientHello),sizeof(ServerHello));
 
-        unsigned char conversation[CONVERSATION_SIZE];
+        //unsigned char conversation[CONVERSATION_SIZE];
 
-        unsigned char* nonces = conversation; // hashtag readability
-        unsigned char* client_nonce = conversation;
-        unsigned char* server_nonce = client_nonce + NONCE_SIZE;
+        Conversation conversation;
 
-        unsigned char* ek_client_raw = server_nonce + NONCE_SIZE;
-        unsigned char* ek_server_raw = ek_client_raw + EPH_KEY_SIZE;
-        
         unsigned char buffer[MAX_MESS_SIZE];
+
+        ClientHello* c_hello = (ClientHello*) buffer;
+        ServerHello* s_hello = (ServerHello*) buffer;
 
         status outcome;
 
-        ssize_t byte_counter = s_conn->recvMess(buffer,NONCE_SIZE + EPH_KEY_SIZE);
+        ssize_t byte_counter = s_conn->recvMess((unsigned char*)c_hello,sizeof(ClientHello));
 
         printf("PH: Received %ld bytes\n",byte_counter);
 
@@ -104,12 +105,12 @@ class ServerAsym : public CryptoAsym{
             return status::ERROR;
         }
 
-        memcpy(conversation, buffer, NONCE_SIZE);
-        memcpy(ek_client_raw, buffer + NONCE_SIZE, EPH_KEY_SIZE);
+        memcpy(conversation.c_nonce, c_hello->nonce, NONCE_SIZE);
+        memcpy(conversation.c_eph_key_raw, c_hello->eph_key_raw, EPH_KEY_SIZE);
 
         EVP_PKEY* ek_client = nullptr;
 
-        outcome = rebuildEphimeralKey(ek_client_raw, &ek_client);
+        outcome = rebuildEphimeralKey(c_hello->eph_key_raw, &ek_client);
 
 
         if(outcome == status::ERROR){
@@ -124,29 +125,29 @@ class ServerAsym : public CryptoAsym{
             return status::ERROR;
         }
 
-        if(!s_conn->randomBytesGenerator(buffer,NONCE_SIZE)){
+        if(!s_conn->randomBytesGenerator(s_hello->nonce,NONCE_SIZE)){
             printf("PH: RandomBytesGenerator FAILURE\n");
             return status::ERROR;
         }
 
         printf("Nonce Generated\n");
 
-        outcome = getRawEphimeralKey(ek_server, ek_server_raw);
+        outcome = getRawEphimeralKey(ek_server, s_hello->eph_key_raw);
 
         if(outcome == status::ERROR){
             printf("PH: ERROR IN RAW EK!\n");
             return outcome;
         }
 
-        memcpy(server_nonce, buffer, NONCE_SIZE);
-        memcpy(buffer + NONCE_SIZE, ek_server_raw, EPH_KEY_SIZE);
+        memcpy(conversation.s_nonce, s_hello->nonce, NONCE_SIZE);
+        memcpy(conversation.s_eph_key_raw, s_hello->eph_key_raw, EPH_KEY_SIZE);
 
 
-        generateSignature(handshake_privkey ,conversation , CONVERSATION_SIZE, buffer + NONCE_SIZE + EPH_KEY_SIZE);
+        generateSignature(handshake_privkey , (unsigned char*)&conversation , sizeof(Conversation), s_hello->signature);
 
         printf("SIGNATURE GENERATED\n");
 
-        byte_counter = s_conn->sendMess(buffer, MAX_MESS_SIZE);
+        byte_counter = s_conn->sendMess((unsigned char*)s_hello, sizeof(ServerHello));
         printf("Sent %ld bytes\n",byte_counter);
 
         outcome = calculateSharedSecret(ek_server, ek_client, buffer);
@@ -161,6 +162,7 @@ class ServerAsym : public CryptoAsym{
         printf("SHARED SECRET: ");
 
         unsigned char symmetric_key[AES_KEY_SIZE];
+        unsigned char* nonces = (unsigned char*)&conversation;
         outcome = getSessionKey(buffer, symmetric_key, nonces);
         
         if(outcome == status::ERROR){

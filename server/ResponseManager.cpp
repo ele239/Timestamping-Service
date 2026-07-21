@@ -73,6 +73,14 @@ class ResponseManager{
         return (len != 0 && input[len] == '\0');
     }
 
+    uint64_t generateTimestamp() {
+        auto now = std::chrono::system_clock::now();
+        auto duration = now.time_since_epoch();
+        auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+        
+        return static_cast<uint64_t>(millis);
+    }
+
     void temp_stampa(const char* buffer, int len){
     for(int i = 0; i < len; i++){
             char c = buffer[i];
@@ -107,8 +115,7 @@ class ResponseManager{
         }
 
         char* password = (char*)&buffer[password_pos];
-        temp_stampa(password,13);
-        printf("%.30s\n",password);
+
         if(!validString(password, MAX_PWD_LEN))
             return status::INVALID;
         
@@ -129,7 +136,7 @@ class ResponseManager{
         TimestampInfo timestamps = uinfo->getTimestamps(client_id);
 
         printf("Forming message...\n");
-        resp->type = status::OK;
+        resp->sts = status::OK;
 
         // htonl
 
@@ -142,10 +149,54 @@ class ResponseManager{
         ssize_t ret = svConn->encSend((unsigned char*)resp, PAYLOAD_LEN);
 
         printf("Message sent\n");
-        return (ret == PAYLOAD_LEN + IV_SIZE + TAG_SIZE) ? status::OK : status::ERROR;
+        return (ret == IV_SIZE + PAYLOAD_LEN + TAG_SIZE) ? status::OK : status::ERROR;
+    }
+
+    status generateSignature(const unsigned char* data_to_sign, int data_size, unsigned char* signature){
+        EVP_PKEY* sign_key = svAsym->getSignPrivKey(); 
+        return svAsym->generateSignature(sign_key, data_to_sign, data_size, signature);
     }
 
     status signDoc(){
+
+        SignatureMess* s_mess = (SignatureMess*) buffer;
+
+        status outcome = uinfo->consumeTimestamp(client_id);
+
+        if(outcome != status::OK){
+            sendStatus(outcome);
+            return (outcome == status::INVALID) ? status::OK : status::ERROR;
+        }
+        
+        unsigned char unsigned_data[HASH_SIZE + TS_SIZE];
+        SignatureMess* to_sign_mess = (SignatureMess*) (unsigned_data - 1);
+
+        memcpy(to_sign_mess->hash,m->payload, HASH_SIZE);
+        u_int64_t ts = generateTimestamp();
+        memcpy(to_sign_mess->timestamp, &ts, sizeof(ts)); 
+
+        outcome = generateSignature(unsigned_data, HASH_SIZE + TS_SIZE, s_mess->signature);     
+        
+        if(outcome != status::OK){
+            sendStatus(status::ERROR);
+            return status::ERROR;
+        }
+
+        memcpy(resp->payload, unsigned_data, HASH_SIZE + TS_SIZE);
+
+        resp->sts = status::OK;
+
+        const unsigned int PAYLOAD_SIZE = 1 + HASH_SIZE + TS_SIZE + SIGNATURE_SIZE;
+
+        ssize_t byte_counter = svConn->encSend((unsigned char*)s_mess, PAYLOAD_SIZE);
+
+        printf("Miche ho inviato\n");
+
+        if(byte_counter < IV_SIZE + PAYLOAD_SIZE + TAG_SIZE){
+            printf("signDoc: SEND ERROR OR SOCKET CLOSED!\n");
+            return status::ERROR;
+        }
+
         return status::OK;
     }
 
