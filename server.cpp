@@ -1,14 +1,34 @@
 #include "server/ServerConnection.cpp"
 #include "server/UserInfoManager.cpp"
 #include "server/ServerAsym.cpp"
+#include "server/ResponseManager.cpp"
+#include "utility/Mess.h"
 
 UserInfoManager uinfo;
 ServerAsym Server_Asymmetric_Keys;
 
+
+void temp_stampa(const char* buffer, int len){
+    for(int i = 0; i < len; i++){
+            char c = buffer[i];
+            if(c == '\n')
+                cout<<"\\n";
+            else
+            if(c == '\r')
+                cout<<"\\r";
+            else            
+            if(c == '\0')
+                cout<<"\\0";
+            else
+            cout<<c;
+        }
+        cout <<endl;
+}
+
 void worker(int sk){
 
     string client_username("");
-    int client_id;
+    unsigned int client_id;
 
     ServerConnection svConn(sk);
     ServerAsym s_asym(Server_Asymmetric_Keys, &svConn);
@@ -25,38 +45,85 @@ void worker(int sk){
         return;
     }
 
-    vector<unsigned char> vec_buffer(100);
+    printf("Handshake Performed successfully!\n");
+
+    vector<unsigned char> vec_buffer(MAX_PLAINTEXT_SIZE);
     unsigned char* buffer = vec_buffer.data();
+
+    auto clear_buf = [&](){ memset(buffer,0,MAX_PLAINTEXT_SIZE); };
+
+    auto sendStatus = [&](status s){
+        u_int8_t s_raw = (unsigned char)s;
+        int ret = svConn.encSend(&s_raw, sizeof(status));
+        return (ret > 0) ? status::OK : status::ERROR;
+    };
+
+    printf("Awaiting for User Authentication\n");
 
     unsigned char tries = MAX_TRIES;
     while(tries){
+        printf("Tries remaining: %d\n", tries);
         bytes_counter = svConn.decRecv(buffer);
-        
+
         if(bytes_counter <= 0){
             printf("ERROR OCCURRED OR SOCKET CLOSED. ABORTING...\n");
             return;
         }
 
-        unsigned char username_len = buffer[0];
-        unsigned char pwd_len = buffer[1];
+        char* username = (char*)buffer;
+        unsigned char username_len = strnlen(username,MAX_USERNAME_LEN);
 
-        if(username_len >= MAX_USERNAME_LEN || pwd_len >= MAX_PWD_LEN){
+        if(username_len == 0 || username[username_len] != '\0'){
             tries--;
+            if(tries > 0)
+                sendStatus(status::INVALID);
             continue;
         }
 
-        if(uinfo.checkCredentials()){
+        char* password = (char*)&buffer[username_len + 1];
+        unsigned char pwd_len = strnlen(password, MAX_PWD_LEN);
+
+        if(pwd_len == 0 || password[pwd_len] != '\0'){
+            tries--;
+            if(tries > 0)
+                sendStatus(status::INVALID);
+            continue;
+        }
+
+        if(uinfo.checkCredentials(username,password)){
+            printf("MATCH FOUND\n");
+            client_username = username;
+            client_id = uinfo.findUser(client_username);
+            clear_buf();
             break;
         }
 
         tries--;
+        if(tries > 0)
+            sendStatus(status::INVALID);
     }
     if(!tries){
         printf("The user failed to authenticate. Aborting the connection...\n");
+        sendStatus(status::ERROR);
         return;
-    }else
-        printf("The user \"%s\" has logged in successfully.\n",);
+    }else{
+        printf("The user \"%s\" has logged in successfully.\n",client_username.data());
+        sendStatus(status::OK);
+    }
 
+    ResponseManager rm(client_id, &uinfo, &svConn, buffer);
+
+    while(true){
+        
+        outcome = rm.manageResponse();
+
+        if(outcome != status::OK){
+            break;
+        }
+
+    }
+
+    printf("Connection Terminated with \"%s\". Thread exiting...\n", client_username.c_str());
 
 }
 

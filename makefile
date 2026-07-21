@@ -4,7 +4,7 @@ server: server.cpp server/ServerConnection.cpp server/UserInfoManager.cpp utilit
 	g++ -Wall -std=c++20 server.cpp -o sv -lcrypto
 
 client: client.cpp client/ClientConnection.cpp client/ClientAsym.cpp
-	g++ client.cpp -o cl -lcrypto
+	g++ -std=c++20 client.cpp -o cl -lcrypto
 
 clean:
 	rm -f sv cl

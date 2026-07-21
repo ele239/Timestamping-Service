@@ -1,6 +1,9 @@
+#ifndef UINFOMNG
+#define UINFOMNG
+
 #include "../include/const.h"
 #include "../utility/Hash.cpp"
-#include "DTOs.h"
+#include "../utility/DTOs.h"
 
 class UserInfoManager{
 
@@ -53,14 +56,17 @@ public:
         return (outcome == status::OK);
     }
 
-    bool checkCredentials(const string username, const string psw){
+    bool checkCredentials(const char* usr_ptr, const char* psw_ptr){
+
+        const string username(usr_ptr);
+        const string psw(psw_ptr);
 
         int index = findUser(username);
         if(index == -1){
-            printf("Username %s not found", username.c_str());
+            printf("Username \"%s\" not found\n", username.c_str());
             return false; 
         }
-
+        
         Hash hashManager; 
         string salted_psw = clientListInformation[index].salt + psw;
         char* hashed_pwd = (char*)hashManager.calculateHash(salted_psw.c_str());
@@ -69,12 +75,12 @@ public:
         hashManager.hashToString((unsigned char*)hashed_pwd,string_hash);
         string_hash[HASH_SIZE*2] = '\0';
 
-        bool valid_password = CRYPTO_memcmp(clientListInformation[index].password.data(), string_hash, HASH_SIZE * 2);
+        int ret = CRYPTO_memcmp(clientListInformation[index].password.data(), string_hash, HASH_SIZE * 2);
+        bool valid_password = (ret == 0);
         return valid_password; 
     }
 
-    TimestampInfo getTimestamps(const char* username){
-        int index = findUser(username);
+    TimestampInfo getTimestamps(const unsigned int index){
         
         TimestampInfo timestamps{clientListInformation[index].timestamps_remaining, clientListInformation[index].timestamps_consumed};
         return timestamps;
@@ -89,3 +95,4 @@ public:
     }
 
 };
+#endif

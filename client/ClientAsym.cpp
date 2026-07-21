@@ -110,8 +110,7 @@ class ClientAsym : public CryptoAsym{
             
             
             unsigned char* signature = &buffer[NONCE_SIZE + EPH_KEY_SIZE];
-            signature[0] ^= 0x01;
-            message_to_verify[0] ^= 0x01;
+            
             outcome = verifySignature(s_handshake_pubkey, message_to_verify, NONCE_SIZE*2 + EPH_KEY_SIZE*2, signature);
             if(outcome == status::INVALID){
                 printf("The signature is invalid.\n");

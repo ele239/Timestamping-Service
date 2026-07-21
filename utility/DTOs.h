@@ -1,3 +1,6 @@
+#ifndef DTOS
+#define DTOS
+
 #include "../include/const.h"
 
 struct TimestampInfo{
@@ -15,3 +18,4 @@ struct UserInfo{
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(UserInfo, username, salt, password, timestamps_remaining, timestamps_consumed)
+#endif

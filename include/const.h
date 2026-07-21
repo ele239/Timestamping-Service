@@ -38,15 +38,25 @@
 
 #define HASH_SIZE 32
 
-#define MAX_TRIES 3;
+#define MAX_TRIES 3
+
+#define MAX_COMMAND_LEN 9
+
+#define MAX_PATH_LEN 150
 
 using namespace std;
 using json = nlohmann::json;
 
-enum class status{
+enum class status : uint8_t{
     OK,
     ERROR,
     INVALID
+};
+
+enum class request : uint8_t{
+    BALANCE,
+    SIGN,
+    EXIT
 };
 
 #endif
