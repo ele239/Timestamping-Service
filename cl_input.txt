@@ -1,0 +1,9 @@
+seba
+sebastiano
+sign
+p.txt
+sign
+p.txt
+verify
+p.txt
+exit

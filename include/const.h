@@ -10,6 +10,9 @@
 // User json path
 #define USER_CREDENTIALS_PATH "server/UserInfo/UserCredentials.json"
 
+// Signature path
+#define SIGNATURE_FILE_PATH "client/Signatures.txt"
+
 // Server Keys path
 #define SERVER_SIGN_PRIV "server/keys/server_sign_priv.pem"
 #define SERVER_SIGN_PUB "server/keys/server_sign_pub.pem"
@@ -52,6 +55,11 @@
 #define TS_SIZE 8
 
 #define COMPLETE_INFO
+
+#define COLOR_GREEN   "\033[32m"
+#define COLOR_RED     "\033[31m"
+#define COLOR_YELLOW  "\033[33m"
+#define COLOR_RESET    "\033[0m"
 
 using namespace std;
 using json = nlohmann::json;

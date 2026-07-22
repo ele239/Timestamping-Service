@@ -80,8 +80,6 @@ public:
             return -1;
         }
 
-        printf("encSend: SENDING %d BYTES...\n",IV_SIZE + payload_size + TAG_SIZE);
-
         return sendMess(payload_buffer, IV_SIZE + payload_size + TAG_SIZE);
     }
 
@@ -99,8 +97,6 @@ public:
         unsigned char recv_buffer[MAX_CIPHERTEXT_SIZE];
         
         int num_bytes_rec = recvMess(recv_buffer, MAX_CIPHERTEXT_SIZE);
-        
-        printf("ricevuti: %d byte\n",num_bytes_rec);
 
         if(num_bytes_rec == 0){ //socket closure
             printf("decRecv: CONNECTION TERMINATED\n");

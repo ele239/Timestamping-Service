@@ -6,6 +6,9 @@ SessionManager session;
 void th_kbd(){
 
     if(session.login() != status::OK){
+        #ifdef COMPLETE_INFO
+        printf("LOGIN: ");
+        #endif
         printf("Authentication failed. Closing connection.\n");
         return;
     }
@@ -16,8 +19,10 @@ void th_kbd(){
         printf("Insert a valid command: \n");
         printf("- Balance: shows the number of available and consumed timestamps\n");
         printf("- Sign: request to sign a document\n");
+        printf("- Verify: verify a document signature\n");
+        printf("- Exit\n");
 
-        printf("Command: ");
+        printf("Insert command: ");
         char command[MAX_COMMAND_LEN];
         fgets(command, MAX_COMMAND_LEN, stdin);
         command[strlen(command)-1] = '\0';
@@ -41,8 +46,23 @@ void th_kbd(){
                 break;
             }
         }
-        else
+        else if(!strcasecmp("verify", command)){
+            outcome = session.verify();
+            if(outcome == status::ERROR){
+                printf("ERROR: Error in signature verification\n");
+                break;
+            }
+        }
+        else if(!strcasecmp("exit", command)){
+            printf("Exiting ...\n");
+            return;
+        }
+        else{
+            #ifdef COMPLETE_INFO
+            printf("COMMAND: ");
+            #endif
             printf("Invalid command inserted\n");
+        }
             
         this_thread::sleep_for(3s); 
     }
@@ -69,6 +89,9 @@ int main(int argc, char* argv[]){
     printf("MAIN: Socket created successfully\n");
     #endif
     
+    #ifdef COMPLETE_INFO
+    printf("MAIN: ");
+    #endif
     printf("Connecting to server...\n");
     
     status connection = session.connectTo(SERVER_ADDRESS, port);
@@ -78,7 +101,7 @@ int main(int argc, char* argv[]){
     }
     
     #ifdef COMPLETE_INFO
-    printf("MAIN: Connection established. Attemping Handshake\n");
+    printf("\nMAIN: Connection established. Attemping Handshake\n");
     #endif
     
     status outcome = session.performHandshake();

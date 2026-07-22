@@ -11,6 +11,7 @@ private:
 
     status outcome;
     vector<UserInfo> clientListInformation;
+    mutex mtx;
 
 public: 
 
@@ -52,6 +53,31 @@ public:
         clientListInformation = j.get<std::vector<UserInfo>>();
     }
 
+    status saveToFile(){
+
+        lock_guard<mutex> lock(mtx);
+
+        std::ofstream file(USER_CREDENTIALS_PATH);
+
+        if(!file.is_open()){
+            printf("ERROR: Error while opening %s file\n", USER_CREDENTIALS_PATH);
+            return status::ERROR;
+        }
+
+        json j = clientListInformation;
+
+        try {
+            file << j.dump(4);
+        } catch (const json::exception& e) {
+            printf("ERROR WHEN SERIALIZING TO JSON: %s\n", e.what());
+            return status::ERROR;
+        }
+
+        file.close();
+
+        return status::OK;
+    }
+
     bool isValid(){
         return (outcome == status::OK);
     }
@@ -71,7 +97,7 @@ public:
         string salted_psw = clientListInformation[index].salt + psw;
         unsigned char hashed_pwd[HASH_SIZE];
 
-        hashManager.calculateHash(salted_psw.c_str(), hashed_pwd);
+        hashManager.calculateHash(salted_psw.c_str(), salted_psw.length() ,hashed_pwd);
 
         char string_hash[HASH_SIZE*2 + 1];
         hashManager.hashToString(hashed_pwd,string_hash);

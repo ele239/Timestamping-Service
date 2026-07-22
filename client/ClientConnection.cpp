@@ -27,7 +27,7 @@ class ClientConnection : public Connection{
                 if(errno == ECONNREFUSED || errno == ETIMEDOUT || errno == ENETUNREACH){
 
                     #ifdef COMPLETE_INFO
-                    printf("CONNECT: Connection attempt failedì, retrying in 1s...\n");
+                    printf("CONNECT: Connection attempt failed, retrying in 1s...\n");
                     #endif
 
                     printf("Waiting for a response...\n");
@@ -40,11 +40,12 @@ class ClientConnection : public Connection{
                 #endif
                 return status::ERROR;
             }
-            else
+            else{
                 #ifdef COMPLETE_INFO
                 printf("CONNECT: Successfully connected to %s:%d\n", server_addr, port);
                 #endif
                 return status::OK;
+            }
         }
     }
 

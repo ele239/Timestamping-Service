@@ -11,7 +11,7 @@ void worker(int sk){
 
     status outcome;
 
-    printf(":: NEW CONNECTION REQUEST ::\n");
+    printf("\n\n---- Connection request: starting New Thread\n");
 
     outcome = rm.performHandshake();
 
