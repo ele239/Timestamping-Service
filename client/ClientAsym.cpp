@@ -32,10 +32,25 @@ class ClientAsym : public CryptoAsym{
         }
 
         status verifySignature(EVP_PKEY *pub_key, const unsigned char *msg, size_t msg_len, const unsigned char *signature) {
+
+            #ifdef COMPLETE_INFO
+            printf("VERIFY_SIG: Starting signature verification, msg_len=%zu\n", msg_len);
+            #endif
+
             EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
-            if (!mdctx) return status::ERROR;
+            if (!mdctx){
+                #ifdef COMPLETE_INFO
+                printf("VERIFY_SIG: EVP_MD_CTX_new() failed\n");
+                #endif
+
+                return status::ERROR;
+            }
 
             if (EVP_DigestVerifyInit(mdctx, NULL, NULL, NULL, pub_key) != 1) {
+                #ifdef COMPLETE_INFO
+                printf("VERIFY_SIG: EVP_DigestVerifyInit() failed\n");
+                #endif
+
                 EVP_MD_CTX_free(mdctx);
                 return status::ERROR;
             }
@@ -46,7 +61,7 @@ class ClientAsym : public CryptoAsym{
             
             status outcome;
 
-            switch (ret) // 1 valid, 0 not valid, < 0 for errors
+            switch (ret) 
             {
             case 0:
                 outcome = status::INVALID;
@@ -61,12 +76,22 @@ class ClientAsym : public CryptoAsym{
                 break;
             }
 
+            #ifdef COMPLETE_INFO
+            printf("VERIFY_SIG: EVP_DigestVerify returned %d -> outcome %d\n", ret, (int)outcome);
+            printf("VERIFY_SIG: (1) -> valid signature \n");
+            printf("VERIFY_SIG: (0) -> invalid signature \n");
+            printf("VERIFY_SIG: (< 0) -> error occurred while verifying the signature \n");
+            #endif
+
             return outcome;
         }
 
         status performHandshake(){
 
             const int MAX_MESS_SIZE = max(sizeof(ClientHello),sizeof(ServerHello));
+            #ifdef COMPLETE_INFO
+            printf("HANDSHAKE: Starting handshake, buffer size=%d bytes\n", MAX_MESS_SIZE);
+            #endif
 
             Conversation conv;
 
@@ -76,84 +101,122 @@ class ClientAsym : public CryptoAsym{
             ServerHello* sv_hello = (ServerHello*) buffer;
             
             EVP_PKEY* ek_client = generateEphemeralKey(); 
+            #ifdef COMPLETE_INFO
+            printf("HANDSHAKE: Ephemeral key pair generated: %s\n", ek_client);
+            #endif
 
             status conversion = getRawEphimeralKey(ek_client, cl_hello->eph_key_raw); 
 
             if(conversion == status::ERROR){
-                printf("Error in generating raw ephimeral key\n");
+                printf("ERROR: Error in generating raw ephimeral key\n");
                 return status::ERROR;
             }
+            
             c_conn->randomBytesGenerator(cl_hello->nonce, NONCE_SIZE);
+            #ifdef COMPLETE_INFO
+            printf("HANDSHAKE: Client nonce generated (%d bytes)\n", NONCE_SIZE);
+            printf("HANDSHAKE: Sending ClientHello, total size=%zu bytes\n", sizeof(ClientHello));
+            #endif
 
             ssize_t byte_sent = c_conn->sendMess((unsigned char*)cl_hello, sizeof(ClientHello));
             if(byte_sent < 0){
-                printf("Error while sending the ephimeral key\n");
+                printf("ERROR: Error while sending the Client Hello Message\n");
                 return status::ERROR;
             }
+
+            #ifdef COMPLETE_INFO
+            printf("HANDSHAKE: Client Hello message sent successfully\n");
+            #endif
 
             memcpy(conv.c_nonce, cl_hello->nonce, NONCE_SIZE);
             memcpy(conv.c_eph_key_raw, cl_hello->eph_key_raw, EPH_KEY_SIZE);
 
-
-            status outcome;
+            #ifdef COMPLETE_INFO
+            printf("HANDSHAKE: Waiting to receive ServerHello, expecting %zu bytes\n", sizeof(ServerHello));
+            printf("HANDSHAKE: - Nonce (%d bytes)", NONCE_SIZE);
+            printf("HANDSHAKE: - Ephimeral key (%d bytes)", EPH_KEY_SIZE);
+            printf("HANDSHAKE: - Signature (%d bytes)", SIGNATURE_SIZE);
+            #endif
             ssize_t received = c_conn->recvMess((unsigned char*)sv_hello, sizeof(ServerHello));
-        
-            printf("PH: Ricevuti %ld byte\n",received);
-
+            
             if(received == 0){
-                printf("PH: CLOSED SOCKET\n");
+                printf("ERROR: Error in recieving the message. Closing the socket ...\n");
                 return status::ERROR;
             }
-        
+
+            #ifdef COMPLETE_INFO
+            printf("HANDSHAKE: ServerHello correctly received\n");
+            #endif
+            
             memcpy(conv.s_nonce, sv_hello->nonce, NONCE_SIZE);
             memcpy(conv.s_eph_key_raw, sv_hello->eph_key_raw, EPH_KEY_SIZE);
             
+            #ifdef COMPLETE_INFO
+            printf("HANDSHAKE: Verifying the signature ... \n");
+            #endif
+            status outcome;
             outcome = verifySignature(s_handshake_pubkey, (unsigned char*)&conv, sizeof(Conversation), sv_hello->signature);
             
             if(outcome == status::INVALID){
-                printf("The signature is invalid.\n");
+                printf("The signature is invalid\n");
                 return outcome;
 
             }else if(outcome == status::ERROR){
-                printf("Error during signature verification\n");
+                printf("ERROR: Error occurred during signature verification\n");
                 return outcome;
                 
-            }else 
-                printf("Miche la firma va\n");
-            
+            }
+            #ifdef COMPLETE_INFO
+            printf("HANDSHAKE: Signature correctly verified\n");
+            #endif
             
             EVP_PKEY* ek_server = nullptr;
             outcome = rebuildEphimeralKey(conv.s_eph_key_raw, &ek_server);
 
             if(outcome == status::ERROR){
-                printf("PH: ERRRORE IN REBUILD!\n");
+                printf("ERROR: ERRRORE IN REBUILD!\n");
                 return outcome;
             }
+
+            #ifdef COMPLETE_INFO
+            printf("HANDSHAKE: Server ephemeral public key rebuilt from raw bytes successfully\n");
+            #endif
             
             unsigned char shared_secret[SHARED_SECRET_SIZE];
+
+            #ifdef COMPLETE_INFO
+            printf("HANDSHAKE: Calculating shared secret via ECDH (%d bytes expected)...\n", SHARED_SECRET_SIZE);
+            #endif
 
             outcome = calculateSharedSecret(ek_client, ek_server, shared_secret);
 
             if(outcome == status::ERROR){
-                printf("PH: Error in creating the shared secret!\n");
+                printf("ERROR: Error in creating the shared secret!\n");
                 return outcome;
             }
-            printf("SHARED SECRET OBTAINED\n");
-
+            #ifdef COMPLETE_INFO
+            printf("HANDSHAKE: Shared secret obtained\n");
+            #endif
 
             unsigned char* nonces = (unsigned char*)&conv;
 
             unsigned char symmetric_key[AES_KEY_SIZE];
+
+            #ifdef COMPLETE_INFO
+            printf("HANDSHAKE: Deriving symmetric session key from shared secret and nonces (%d bytes)\n", AES_KEY_SIZE);
+            #endif
             outcome = getSessionKey(shared_secret, symmetric_key, nonces); 
 
             if(outcome == status::ERROR){
-                printf("PH: ERRORE IN GET SESSION KEY!\n");
+                printf("ERROR: Error in generating the session key\n");
                 return outcome;
             }
 
             c_conn->symCipherInit(symmetric_key);
             
-            printf("Session Key Extracted\n");
+            #ifdef COMPLETE_INFO
+            printf("HANDSHAKE: Session Key correctly generated\n");
+            #endif
             return status::OK;
         }
 };

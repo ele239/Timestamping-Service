@@ -30,21 +30,28 @@
 #define SHARED_SECRET_SIZE 32
 #define AES_KEY_SIZE 32
 
-// signature size
+// Signature size
 #define SIGNATURE_SIZE 64
 
-// nonce size
+// Nonce size
 #define NONCE_SIZE 32
 
+// Hash size
 #define HASH_SIZE 32
 
+// Max number of authentication tries
 #define MAX_TRIES 3
 
+// Max command length 
 #define MAX_COMMAND_LEN 9
 
+// Max path length
 #define MAX_PATH_LEN 150
 
+// Max timestamp size
 #define TS_SIZE 8
+
+#define COMPLETE_INFO
 
 using namespace std;
 using json = nlohmann::json;
