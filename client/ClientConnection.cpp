@@ -17,7 +17,7 @@ class ClientConnection : public Connection{
         inet_pton(AF_INET, server_addr, &socket_info.sin_addr);
         
         #ifdef COMPLETE_INFO
-        printf(SKYBLUE("CONNECT") "Attempting connection to %s:%d\n", server_addr, port);
+        printf("\n" SKYBLUE("CONNECT") "Attempting connection to %s:%d\n", server_addr, port);
         #endif
 
         while(true){    
@@ -51,7 +51,7 @@ class ClientConnection : public Connection{
     status createClientSocket(){
 
         #ifdef COMPLETE_INFO
-        printf(BLUE("SOCKET") "Creating client socket...\n");
+        printf(BLUE("SOCKET") "Creating client socket...\n\n");
         #endif
         return this->createSocket();
     }

@@ -91,7 +91,9 @@ class ServerAsym : public CryptoAsym{
 
         status outcome;
 
+        #ifdef COMPLETE_INFO
         printf(YELLOW("HANDSHAKE") "Waiting to receive Client Hello...\n");
+        #endif
 
         
         ssize_t byte_counter = s_conn->recvMess((unsigned char*)c_hello,sizeof(ClientHello));
@@ -121,7 +123,9 @@ class ServerAsym : public CryptoAsym{
 
         outcome = rebuildEphemeralKey(c_hello->eph_key_raw, &ek_client);
 
+        #ifdef COMPLETE_INFO
         printf(YELLOW("HANDSHAKE") "Client ephemeral public key rebuilt successfully\n");
+        #endif
 
         if(outcome == status::ERROR){
             printf(ERROR_MESS "ERROR REBUILDING EPHEMERAL KEY!\n");
@@ -156,7 +160,9 @@ class ServerAsym : public CryptoAsym{
 
         generateSignature(handshake_privkey , (unsigned char*)&conversation , sizeof(Conversation), s_hello->signature);
 
+        #ifdef COMPLETE_INFO
         printf(YELLOW("HANDSHAKE") "Signed the entire conversation\n");
+        #endif
 
         printf(YELLOW("HANDSHAKE") "Sending Server Hello...\n");
 
@@ -177,10 +183,7 @@ class ServerAsym : public CryptoAsym{
             return outcome;
         }
 
-        #ifdef COMPLETE_INFO
-            printf(YELLOW("HANDSHAKE") "Shared secret obtained\n");
-        #endif
-
+        printf(YELLOW("HANDSHAKE") "Shared secret obtained\n");
 
         unsigned char symmetric_key[AES_KEY_SIZE];
         unsigned char* nonces = (unsigned char*)&conversation;
@@ -195,10 +198,11 @@ class ServerAsym : public CryptoAsym{
             return outcome;
         }
         
-        #ifdef COMPLETE_INFO
         printf(YELLOW("HANDSHAKE") "Session Key correctly generated\n");
-        printf(YELLOW("HANDSHAKE") "Initializing Symmetric Cipher\n\n");
+        #ifdef COMPLETE_INFO
+        printf(YELLOW("HANDSHAKE") "Initializing Symmetric Cipher\n");
         #endif
+        printf("\n");
         
         s_conn->symCipherInit(symmetric_key);
 

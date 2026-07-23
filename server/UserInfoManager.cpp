@@ -89,7 +89,7 @@ public:
 
         int index = findUser(username);
         if(index == -1){
-            printf(WARNING_MESS "Username \"%s\" not found\n", username.c_str());
+            printf("\n" WARNING_MESS "Username \"%s\" not found\n", username.c_str());
             return false; 
         }
         
@@ -132,7 +132,7 @@ public:
 
         UserInfo* user = &clientListInformation[index];
         if(user->timestamps_remaining == 0){
-            printf(WARNING_MESS "User \"%s\" has no timestamps left\n", user->username.c_str());
+            printf("\n" WARNING_MESS "User \"%s\" has no timestamps left\n", user->username.c_str());
             return status::INVALID;
         }
 

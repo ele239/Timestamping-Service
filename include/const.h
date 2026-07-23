@@ -56,7 +56,7 @@
 
 #define COLOR_GREEN   "\033[32m"
 #define COLOR_RED     "\033[31m"
-#define COLOR_YELLOW  "\033[33m"
+#define COLOR_YELLOW  "\033[38;5;229m"
 #define COLOR_BLUE    "\033[34m"
 #define COLOR_SKYBLUE "\033[38;2;135;206;235m"
 #define COLOR_INDIGO  "\033[38;2;75;0;130m"

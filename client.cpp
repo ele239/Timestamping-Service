@@ -10,7 +10,7 @@ void th_kbd(){
     #endif
 
     if(session.login() != status::OK){
-        printf(WARNING_MESS "Authentication failed. Closing connection.\n");
+        printf(ERROR_MESS "Authentication failed. Closing connection.\n");
         return;
     }
 
@@ -18,10 +18,10 @@ void th_kbd(){
         
         printf("\n-------------------------- COMMAND INTERFACE --------------------------\n");
         printf(INDIGO("Insert a valid command")"\n");
-        printf("- " YELLOW("Balance") "shows the number of available and consumed timestamps\n");
-        printf("- " YELLOW("Sign") "request to sign a document\n");
-        printf("- " YELLOW("Verify") "verify a document signature\n");
-        printf("- " YELLOW("Exit") "quit the application\n");
+        printf("- " INDIGO("Balance") "shows the number of available and consumed timestamps\n");
+        printf("- " INDIGO("Sign") "request to sign a document\n");
+        printf("- " INDIGO("Verify") "verify a document signature\n");
+        printf("- " INDIGO("Exit") "quit the application\n");
 
         printf(INDIGO("Insert command"));
         char command[MAX_COMMAND_LEN];
@@ -43,7 +43,7 @@ void th_kbd(){
         else if(!strcasecmp("sign", command)){
             outcome = session.timestamp();
             if(outcome == status::ERROR){
-                printf(ERROR_MESS "\nError in the document signature\n");
+                printf(ERROR_MESS "Error in the document signature\n");
                 break;
             }
         }
@@ -55,7 +55,7 @@ void th_kbd(){
             }
         }
         else if(!strcasecmp("exit", command)){
-            printf(SKYBLUE("STATUS") "Exiting ...\n");
+            printf("\n" SKYBLUE("STATUS") "Exiting ...\n");
             break;
         }
         else
@@ -74,9 +74,9 @@ int main(int argc, char* argv[]){
         
         printf("\n-------------------------- COMMAND INTERFACE --------------------------\n");
         printf(INDIGO("Insert a valid command")"\n");
-        printf("- " YELLOW("Login") "connect to the Time-Stamping server\n");
-        printf("- " YELLOW("Verify") "verify a document signature\n");
-        printf("- " YELLOW("Exit") "quit the application\n");
+        printf("- " INDIGO("Login") "connect to the Time-Stamping server\n");
+        printf("- " INDIGO("Verify") "verify a document signature\n");
+        printf("- " INDIGO("Exit") "quit the application\n");
 
         printf(INDIGO("Insert command"));
         char command[MAX_COMMAND_LEN];
@@ -109,7 +109,7 @@ int main(int argc, char* argv[]){
 
     int port = (argc == 1) ? DEFAULT_PORT : atoi(argv[1]);
     #ifdef COMPLETE_INFO
-    printf(GREEN("MAIN") "Using port %d\n", port);
+    printf("\n" GREEN("MAIN") "Using port %d\n\n", port);
     #endif
 
     status creation = session.createSocket();
@@ -123,6 +123,9 @@ int main(int argc, char* argv[]){
     printf(GREEN("MAIN") "Socket created successfully\n");
     #endif
     
+    #ifndef COMPLETE_INFO
+    printf("\n");
+    #endif
     printf(GREEN("MAIN") "Connecting to server...\n");
     
     status connection = session.connectTo(SERVER_ADDRESS, port);
@@ -132,7 +135,7 @@ int main(int argc, char* argv[]){
     }
     
     #ifdef COMPLETE_INFO
-    printf(GREEN("MAIN") "Connection established. Attemping Handshake\n");
+    printf("\n" GREEN("MAIN") "Connection established. Attemping Handshake\n");
     #endif
     
     status outcome = session.performHandshake();
@@ -148,7 +151,7 @@ int main(int argc, char* argv[]){
     #endif
 
     #ifdef COMPLETE_INFO
-    printf(GREEN("MAIN") "Starting worker thread\n");
+    printf(GREEN("MAIN") "Starting worker thread\n\n");
     #endif
 
     jthread keyboard(th_kbd);

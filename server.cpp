@@ -64,7 +64,7 @@ void worker(int sk){
             break;
     }
 
-    printf(SKYBLUE("SERVER_THREAD") "Connection Terminated with \"%s\". Thread exiting...\n", rm.getUsername().c_str());
+    printf("\n" SKYBLUE("SERVER_THREAD") "Connection Terminated with \"%s\". Thread exiting...\n", rm.getUsername().c_str());
 
 }
 
@@ -112,7 +112,7 @@ int main(int argc, char* argv[]){
     }
 
     printf(GREEN("MAIN") "Server is turning on -> Port: %d\n",port);
-    printf(GREEN("MAIN") "Starting Listen Thread...\n");
+    printf(GREEN("MAIN") "Starting Listen Thread...\n\n");
     
     jthread th_listener(th_listen, port);
 

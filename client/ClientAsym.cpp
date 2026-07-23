@@ -104,9 +104,7 @@ class ClientAsym : public CryptoAsym{
                 return status::ERROR;
             }
 
-            #ifdef COMPLETE_INFO
             printf(YELLOW("HANDSHAKE") "Client ephemeral key pair generated\n");
-            #endif
 
             status conversion = getRawEphemeralKey(ek_client, cl_hello->eph_key_raw); 
 
@@ -116,9 +114,10 @@ class ClientAsym : public CryptoAsym{
             }
             
             c_conn->randomBytesGenerator(cl_hello->nonce, NONCE_SIZE);
+            printf(YELLOW("HANDSHAKE") "Client nonce generated (%d bytes)\n", NONCE_SIZE);
+            
             #ifdef COMPLETE_INFO
-                printf(YELLOW("HANDSHAKE") "Client nonce generated (%d bytes)\n", NONCE_SIZE);
-                printf(YELLOW("HANDSHAKE") "Sending Client Hello...\n");
+            printf(YELLOW("HANDSHAKE") "Sending Client Hello...\n");
             
                 #ifdef MESSAGE_FORMAT
                     printf(FORMAT("ClientHello") "[ C_NONCE (%d) | C_EPH_PUB_KEY(%d) ] -> %zu bytes\n", NONCE_SIZE, EPH_KEY_SIZE, sizeof(ClientHello));
@@ -131,9 +130,7 @@ class ClientAsym : public CryptoAsym{
                 return status::ERROR;
             }
 
-            #ifdef COMPLETE_INFO
             printf(YELLOW("HANDSHAKE") "Client Hello message sent successfully\n");
-            #endif
 
             memcpy(conv.c_nonce, cl_hello->nonce, NONCE_SIZE);
             memcpy(conv.c_eph_key_raw, cl_hello->eph_key_raw, EPH_KEY_SIZE);
@@ -149,13 +146,13 @@ class ClientAsym : public CryptoAsym{
                 return status::ERROR;
             }
 
-            #ifdef COMPLETE_INFO
-                printf(YELLOW("HANDSHAKE") "ServerHello received\n");
+            printf(YELLOW("HANDSHAKE") "ServerHello received\n");
+
                 #ifdef MESSAGE_FORMAT    
                     printf(FORMAT("ServerHello") "[ NONCE (%d) | S_EPH_PUB_KEY (%d) | SIGNATURE (%d) ] -> %d total bytes\n", NONCE_SIZE, EPH_KEY_SIZE, SIGNATURE_SIZE, NONCE_SIZE + EPH_KEY_SIZE + SIGNATURE_SIZE);
                     printf(YELLOW("HANDSHAKE") "Received %ld bytes\n",received);
-                    #endif
-            #endif
+                #endif
+
             
             memcpy(conv.s_nonce, sv_hello->nonce, NONCE_SIZE);
             memcpy(conv.s_eph_key_raw, sv_hello->eph_key_raw, EPH_KEY_SIZE);
@@ -172,9 +169,9 @@ class ClientAsym : public CryptoAsym{
                 return outcome;
                 
             }
-            #ifdef COMPLETE_INFO
+
             printf(YELLOW("HANDSHAKE") "Server Hello Signature Verified\n");
-            #endif
+
             
             EVP_PKEY* ek_server = nullptr;
             outcome = rebuildEphemeralKey(conv.s_eph_key_raw, &ek_server);
@@ -200,9 +197,9 @@ class ClientAsym : public CryptoAsym{
                 printf(ERROR_MESS "Error in creating the shared secret!\n");
                 return outcome;
             }
-            #ifdef COMPLETE_INFO
+
             printf(YELLOW("HANDSHAKE") "Shared secret obtained\n");
-            #endif
+
 
             unsigned char* nonces = (unsigned char*)&conv;
 
@@ -218,8 +215,9 @@ class ClientAsym : public CryptoAsym{
                 return outcome;
             }
 
-            #ifdef COMPLETE_INFO
             printf(YELLOW("HANDSHAKE") "Session Key correctly generated\n");
+            
+            #ifdef COMPLETE_INFO
             printf(YELLOW("HANDSHAKE") "Initializing Symmetric Cipher\n\n");
             #endif
             

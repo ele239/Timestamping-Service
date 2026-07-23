@@ -104,7 +104,7 @@ class ResponseManager{
         
 
         if(uinfo->checkCredentials(username,password)){
-            printf(AQUA("AUTH_ATTEMPT") "MATCH FOUND\n");
+            printf("\n" AQUA("AUTH_ATTEMPT") "Match found\n\n");
             client_username = username;
             client_id = uinfo->findUser(client_username);
             clearBuffer();
