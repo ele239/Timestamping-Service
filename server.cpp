@@ -11,28 +11,34 @@ void worker(int sk){
 
     status outcome;
 
-    printf("\n\n---- Connection request: starting New Thread\n");
+    printf("\n" SKYBLUE("SERVER_THREAD") "Worker thread started\n");
+
+    printf(SKYBLUE("SERVER_THREAD") "Performing Handshake...\n");
+
 
     outcome = rm.performHandshake();
 
     if(outcome != status::OK){
-        printf("The handshake did not go well. Aborting the connection...\n");
+        printf(WARNING_MESS "The handshake did not go well. Aborting the connection...\n");
         return;
     }
 
-    printf("Handshake Performed successfully!\n");
+    printf(SKYBLUE("SERVER_THREAD") "Handshake Performed successfully!\n");
 
-    printf("Awaiting for User Authentication\n");
+    printf(SKYBLUE("SERVER_THREAD") "Awaiting for User Authentication\n");
 
     unsigned char tries = MAX_TRIES;
 
     while(tries){
-        printf("Tries remaining: %d\n", tries);
+        printf(SKYBLUE("SERVER_THREAD") "Tries remaining: %d\n", tries);
 
         outcome = rm.authenticationAttempt();
 
-        if(outcome == status::ERROR)
+        if(outcome == status::ERROR){
+            printf(ERROR_MESS "An error occurred during authentication. Aborting...\n");
+            rm.sendStatus(status::ERROR);
             return;
+        }
 
         if(outcome == status::OK)
             break;
@@ -42,11 +48,11 @@ void worker(int sk){
             rm.sendStatus(outcome);
     }
     if(!tries){
-        printf("The user failed to authenticate. Aborting the connection...\n");
+        printf(WARNING_MESS "The user failed to authenticate. Aborting the connection...\n");
         rm.sendStatus(status::ERROR);
         return;
     }else{
-        printf("The user \"%s\" has logged in successfully.\n",rm.getUsername().c_str());
+        printf(SKYBLUE("SERVER_THREAD") "The user \"%s\" has logged in successfully.\n",rm.getUsername().c_str());
         rm.sendStatus(status::OK);
     }
 
@@ -58,7 +64,7 @@ void worker(int sk){
             break;
     }
 
-    printf("Connection Terminated with \"%s\". Thread exiting...\n", rm.getUsername().c_str());
+    printf(SKYBLUE("SERVER_THREAD") "Connection Terminated with \"%s\". Thread exiting...\n", rm.getUsername().c_str());
 
 }
 
@@ -70,25 +76,25 @@ void th_listen(short port){
 
     int client_sock;
 
-    printf("Creating Listen Socket...\n");
+    printf(PURPLE("LISTEN_THREAD") "Creating Listen Socket...\n");
 
     outcome = svConn.createListenSocket(port);
 
     
     if(outcome == status::ERROR){
-        printf("FATAL ERROR WHEN CREATING SOCKET!! QUITTING.\n");
+        printf(ERROR_MESS "FATAL ERROR WHEN CREATING SOCKET!! QUITTING.\n");
         return;
     }
 
-    printf("Listen Socket Created. Waiting for Connection...\n");
+    printf(PURPLE("LISTEN_THREAD") "Listen Socket Created. Waiting for Connections...\n");
 
     while(true){
         client_sock = svConn.acceptConnection();
         if(client_sock < 0){
-            printf("Unexpected outcome during accept...\n");
+            printf(ERROR_MESS "Unexpected outcome during accept...\n");
             continue;
         }
-        printf("Connection received!\n");
+        printf(PURPLE("LISTEN_THREAD") "Connection received! Starting new Worker...\n");
         jthread work(worker, client_sock);
 
     }
@@ -101,11 +107,12 @@ int main(int argc, char* argv[]){
     in_port_t port = (argc == 1) ? DEFAULT_PORT : atoi(argv[1]);
 
     if(!uinfo.isValid()){
-        printf("Failure in loading User Info! Aborting...\n");
+        printf(ERROR_MESS "Failure in loading User Info! Aborting...\n");
         return EXIT_FAILURE;
     }
 
-    printf("Server is turning on -> Port: %d\n",port);
+    printf(GREEN("MAIN") "Server is turning on -> Port: %d\n",port);
+    printf(GREEN("MAIN") "Starting Listen Thread...");
     
     jthread th_listener(th_listen, port);
 

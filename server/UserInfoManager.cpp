@@ -36,7 +36,7 @@ public:
         std::ifstream file(USER_CREDENTIALS_PATH);
         
         if (!file.is_open()) {
-            printf("ERROR WHEN OPENING JSON FILE AT %s\n", USER_CREDENTIALS_PATH);
+            printf(ERROR_MESS "CAN'T OPEN JSON FILE AT %s\n", USER_CREDENTIALS_PATH);
             outcome = status::ERROR;
             return;
         }
@@ -45,7 +45,7 @@ public:
         try {
             file >> j; // Parsing
         } catch (const json::parse_error& e) {
-            printf("ERROR WHEN PARSING JSON FILE: %s\n", e.what());
+            printf(ERROR_MESS "CAN'T PARSE JSON FILE: %s\n", e.what());
             outcome = status::ERROR;
             return;
         }
@@ -60,7 +60,7 @@ public:
         std::ofstream file(USER_CREDENTIALS_PATH);
 
         if(!file.is_open()){
-            printf("ERROR: Error while opening %s file\n", USER_CREDENTIALS_PATH);
+            printf(ERROR_MESS "Error while opening %s file\n", USER_CREDENTIALS_PATH);
             return status::ERROR;
         }
 
@@ -69,7 +69,7 @@ public:
         try {
             file << j.dump(4);
         } catch (const json::exception& e) {
-            printf("ERROR WHEN SERIALIZING TO JSON: %s\n", e.what());
+            printf(ERROR_MESS "CAN'T SERIALIZE TO JSON: %s\n", e.what());
             return status::ERROR;
         }
 
@@ -89,7 +89,7 @@ public:
 
         int index = findUser(username);
         if(index == -1){
-            printf("Username \"%s\" not found\n", username.c_str());
+            printf(WARNING_MESS "Username \"%s\" not found\n", username.c_str());
             return false; 
         }
         
@@ -115,7 +115,7 @@ public:
         return timestamps;
     } 
 
-    void printa(){
+    void printData(){
         int num_users = clientListInformation.size();
         for (int i = 0; i < num_users; i++){
             UserInfo u = clientListInformation[i];
@@ -126,21 +126,22 @@ public:
     status consumeTimestamp(int index){
 
         if(index < 0 || index >= (int)clientListInformation.size()){
-            printf("Invalid index\n");
+            printf(ERROR_MESS "Invalid index\n");
             return status::ERROR;
         }
 
         UserInfo* user = &clientListInformation[index];
         if(user->timestamps_remaining == 0){
-            printf("No timestamp left\n");
+            printf(WARNING_MESS "User \"%s\" has no timestamps left\n", user->username.c_str());
             return status::INVALID;
         }
 
         user->timestamps_remaining--; 
         user->timestamps_consumed++;
-        printf("Timestamps correctly updated\n");
 
-        printa();
+        saveToFile();
+
+        //printData();
         return status::OK;
     }
 

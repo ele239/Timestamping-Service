@@ -32,10 +32,19 @@ public:
     }
 
     status createListenSocket(short port){
+        
+        #ifdef COMPLETE_INFO
+        printf(BLUE("SOCKET") "Creating listen socket...\n");
+        #endif
+        
         status outcome = this->createSocket();
         
         if(outcome == status::ERROR)
             return outcome;
+
+        #ifdef COMPLETE_INFO
+        printf(BLUE("SOCKET") "Binding socket...\n");
+        #endif
 
         outcome = bindSocket(port);
 

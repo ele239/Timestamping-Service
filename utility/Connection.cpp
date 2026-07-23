@@ -53,7 +53,7 @@ public:
 
     ssize_t encSend(const unsigned char* mess, int mess_len){
         if(!sym_cipher){
-            printf("encSend: THE CIPHER IS NOT INITIALIZED!\n");
+            printf(ERROR_MESS "CAN'T ENCRYPT, THE CIPHER IS NOT INITIALIZED!\n");
             return -1;
         }
         
@@ -61,7 +61,7 @@ public:
             return 0;
 
         if(!mess || mess_len > MAX_PLAINTEXT_SIZE || mess_len < 0){
-            printf("encSend: INVALID INPUT PARAMETERS!\n");
+            printf(ERROR_MESS "CAN'T ENCRYPT, INVALID INPUT PARAMETERS!\n");
             return -1;
         }
         
@@ -85,12 +85,12 @@ public:
 
     ssize_t decRecv(unsigned char* buffer){
         if(!sym_cipher){
-            printf("decRecv: THE CIPHER IS NOT INITIALIZED!\n");
+            printf(ERROR_MESS "CAN'T DECRYPT, THE CIPHER IS NOT INITIALIZED!\n");
             return -1;
         }
 
         if(!buffer){
-            printf("decRecv: BUFFER IS NULLPTR\n");
+            printf(ERROR_MESS "CAN'T DECRYPT, OUTPUT BUFFER IS NULLPTR\n");
             return -1;
         }
         
@@ -99,19 +99,19 @@ public:
         int num_bytes_rec = recvMess(recv_buffer, MAX_CIPHERTEXT_SIZE);
 
         if(num_bytes_rec == 0){ //socket closure
-            printf("decRecv: CONNECTION TERMINATED\n");
+            printf(ERROR_MESS "SOCKET WAS CLOSED\n");
             return 0;
         }
 
         if(num_bytes_rec == -1){
-            printf("decRecv: ERROR OCCURRED WHILE RECEIVING THE MESSAGE\n");
+            printf(ERROR_MESS "CAN'T DECRYPT, ERROR OCCURRED WHILE RECEIVING THE MESSAGE\n");
             return -1;
         }
         
         int payload_len = num_bytes_rec - IV_SIZE - TAG_SIZE;
         
         if(payload_len < 1){
-            printf("decRecv: PAYLOAD GOOFY\n");
+            printf(ERROR_MESS "CAN'T DECRYPT, PAYLOAD IS MISSING\n");
             return -1;
         }
 
@@ -124,7 +124,7 @@ public:
         status outcome = sym_cipher->decrypt(payload, payload_len, iv, tag, buffer, &plain_len); 
         
         if(outcome == status::ERROR){
-            printf("decRecv: DECRYPTION FAILED\n");
+            printf(WARNING_MESS "DECRYPTION FAILED\n");
             return -1;
         }
 

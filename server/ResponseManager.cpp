@@ -81,29 +81,12 @@ class ResponseManager{
         return static_cast<uint64_t>(millis);
     }
 
-    void temp_stampa(const char* buffer, int len){
-    for(int i = 0; i < len; i++){
-            char c = buffer[i];
-            if(c == '\n')
-                cout<<"\\n";
-            else
-            if(c == '\r')
-                cout<<"\\r";
-            else            
-            if(c == '\0')
-                cout<<"\\0";
-            else
-            cout<<c;
-        }
-        cout <<endl;
-    }
-
     status authenticationAttempt(){
 
         ssize_t bytes_counter = svConn->decRecv(buffer);
 
         if(bytes_counter <= 0){
-            printf("ERROR OCCURRED OR SOCKET CLOSED. ABORTING...\n");
+            printf(ERROR_MESS "decRecv FAILED.\n");
             return status::ERROR;
         }
 
@@ -121,7 +104,7 @@ class ResponseManager{
         
 
         if(uinfo->checkCredentials(username,password)){
-            printf("MATCH FOUND\n");
+            printf(AQUA("AUTH_ATTEMPT") "MATCH FOUND\n");
             client_username = username;
             client_id = uinfo->findUser(client_username);
             clearBuffer();
@@ -132,10 +115,9 @@ class ResponseManager{
 
     status sendBalance(){
 
-        printf("Balance request received. Providing response...\n");
+        printf("\n" INDIGO("SEND_BALANCE") "Balance request received. Providing response...\n");
         TimestampInfo timestamps = uinfo->getTimestamps(client_id);
 
-        printf("Forming message...\n");
         resp->sts = status::OK;
 
         // htonl
@@ -144,12 +126,20 @@ class ResponseManager{
 
         const unsigned int PAYLOAD_LEN = 1 + sizeof(timestamps);
 
-        printf("Message formed.\n");
-
         ssize_t ret = svConn->encSend((unsigned char*)resp, PAYLOAD_LEN);
 
-        printf("Message sent\n");
-        return (ret == IV_SIZE + PAYLOAD_LEN + TAG_SIZE) ? status::OK : status::ERROR;
+        if(ret != IV_SIZE + PAYLOAD_LEN + TAG_SIZE){
+            if(ret == 0)
+                printf(ERROR_MESS "SOCKET WAS CLOSED\n");
+            else
+                printf(ERROR_MESS "encSend FAILED\n");
+            return status::ERROR;
+        }
+
+            printf(INDIGO("SEND_BALANCE") "Timestamp balance sent.\n");
+            printf(FORMAT("Timestamp Balance") "[ Status (1) | Remaining (4) | Consumed (4) ] -> 9 bytes\n");
+        
+        return status::OK;
     }
 
     status generateSignature(const unsigned char* data_to_sign, int data_size, unsigned char* signature){
@@ -158,6 +148,10 @@ class ResponseManager{
     }
 
     status signDoc(){
+
+        printf("\n" GREEN("SIGN_DOC") "Signature request received. Providing response...\n");
+
+        printf(FORMAT("Sign Request") "[ SIGN_REQUEST (1) | HASH (%d) ] -> %d bytes\n", HASH_SIZE, 1 + HASH_SIZE);
 
         SignatureMess* s_mess = (SignatureMess*) buffer;
 
@@ -172,12 +166,14 @@ class ResponseManager{
         SignatureMess* to_sign_mess = (SignatureMess*) (unsigned_data - 1);
 
         memcpy(to_sign_mess->hash,m->payload, HASH_SIZE);
+
         u_int64_t ts = generateTimestamp();
         memcpy(to_sign_mess->timestamp, &ts, sizeof(ts)); 
 
         outcome = generateSignature(unsigned_data, HASH_SIZE + TS_SIZE, s_mess->signature);     
         
         if(outcome != status::OK){
+            printf(ERROR_MESS "AN ERROR OCCURRED DURING SIGNATURE GENERATION\n");
             sendStatus(status::ERROR);
             return status::ERROR;
         }
@@ -188,26 +184,28 @@ class ResponseManager{
 
         const unsigned int PAYLOAD_SIZE = 1 + HASH_SIZE + TS_SIZE + SIGNATURE_SIZE;
 
-        ssize_t byte_counter = svConn->encSend((unsigned char*)s_mess, PAYLOAD_SIZE);
+        printf(GREEN("SIGN_DOC") "Sending signed document to the client\n");
 
-        printf("Miche ho inviato\n");
+        ssize_t byte_counter = svConn->encSend((unsigned char*)s_mess, PAYLOAD_SIZE);
 
         if(byte_counter < IV_SIZE + PAYLOAD_SIZE + TAG_SIZE){
             printf("signDoc: SEND ERROR OR SOCKET CLOSED!\n");
             return status::ERROR;
         }
 
+        printf(FORMAT("Sign Response") "[ STATUS (1) | HASH (%d) | TIMESTAMP (%d) | SIGNATURE (%d) ] -> %d bytes\n",HASH_SIZE, TS_SIZE, SIGNATURE_SIZE, 1 + HASH_SIZE + TS_SIZE + SIGNATURE_SIZE);
+
         return status::OK;
     }
 
     status manageRequests(){
         
-        printf("\nAwaiting for user request\n");
+        printf("\n" SKYBLUE("SERVER_THREAD") "Awaiting for user request...\n");
 
         ssize_t bytes_counter = svConn->decRecv((unsigned char*)m);
 
         if(bytes_counter <= 0){
-            printf("ERROR OCCURRED OR SOCKET CLOSED. ABORTING...\n");
+            printf(ERROR_MESS "decRecv FAILED\n");
             return status::ERROR;
         }
 
@@ -222,7 +220,7 @@ class ResponseManager{
             break;
 
         default:
-            printf("Invalid request received. Aborting...\n");
+            printf(ERROR_MESS "Invalid request received. Aborting...\n");
             return status::ERROR;
             break;
         }

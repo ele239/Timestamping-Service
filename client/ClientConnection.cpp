@@ -17,7 +17,7 @@ class ClientConnection : public Connection{
         inet_pton(AF_INET, server_addr, &socket_info.sin_addr);
         
         #ifdef COMPLETE_INFO
-        printf("CONNECT: Attempting connection to %s:%d\n", server_addr, port);
+        printf(SKYBLUE("CONNECT") "Attempting connection to %s:%d\n", server_addr, port);
         #endif
 
         while(true){    
@@ -27,22 +27,21 @@ class ClientConnection : public Connection{
                 if(errno == ECONNREFUSED || errno == ETIMEDOUT || errno == ENETUNREACH){
 
                     #ifdef COMPLETE_INFO
-                    printf("CONNECT: Connection attempt failed, retrying in 1s...\n");
+                    printf(WARNING_MESS "Connection attempt failed, retrying in 1s...\n");
                     #endif
 
-                    printf("Waiting for a response...\n");
                     this_thread::sleep_for(1s);
                     continue;
                 }
 
                 #ifdef COMPLETE_INFO
-                printf("CONNECT: Unrecoverable error, aborting connection attempt\n");
+                printf(ERROR_MESS "Unrecoverable error, aborting connection attempt\n");
                 #endif
                 return status::ERROR;
             }
             else{
                 #ifdef COMPLETE_INFO
-                printf("CONNECT: Successfully connected to %s:%d\n", server_addr, port);
+                printf(SKYBLUE("CONNECT") "Successfully connected to %s:%d\n", server_addr, port);
                 #endif
                 return status::OK;
             }
@@ -52,7 +51,7 @@ class ClientConnection : public Connection{
     status createClientSocket(){
 
         #ifdef COMPLETE_INFO
-        printf("SOCKET: Creating client socket...\n");
+        printf(BLUE("SOCKET") "Creating client socket...\n");
         #endif
         return this->createSocket();
     }

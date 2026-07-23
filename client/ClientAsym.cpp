@@ -36,7 +36,7 @@ class ClientAsym : public CryptoAsym{
             EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
             if (!mdctx){
                 #ifdef COMPLETE_INFO
-                printf("VERIFY_SIG: EVP_MD_CTX_new() failed\n");
+                printf(ERROR_MESS "CAN'T VERIFY SIGNATUE, EVP_MD_CTX_new() failed\n");
                 #endif
 
                 return status::ERROR;
@@ -44,7 +44,7 @@ class ClientAsym : public CryptoAsym{
 
             if (EVP_DigestVerifyInit(mdctx, NULL, NULL, NULL, pub_key) != 1) {
                 #ifdef COMPLETE_INFO
-                printf("VERIFY_SIG: EVP_DigestVerifyInit() failed\n");
+                printf(ERROR_MESS "CAN'T VERIFY SIGNATUE, EVP_DigestVerifyInit() failed\n");
                 #endif
 
                 EVP_MD_CTX_free(mdctx);
@@ -86,6 +86,8 @@ class ClientAsym : public CryptoAsym{
 
         status performHandshake(){
 
+            printf("\n" COLOR_YELLOW "CLIENT HANDSHAKE BEGIN\n" COLOR_RESET);
+
             const int MAX_MESS_SIZE = max(sizeof(ClientHello),sizeof(ServerHello));
 
             Conversation conv;
@@ -96,50 +98,58 @@ class ClientAsym : public CryptoAsym{
             ServerHello* sv_hello = (ServerHello*) buffer;
             
             EVP_PKEY* ek_client = generateEphemeralKey(); 
+
+            if(!ek_client){
+                printf(ERROR_MESS "EPHIMERAL KEY GENERATION FAILURE!\n");
+                return status::ERROR;
+            }
+
             #ifdef COMPLETE_INFO
-            printf("HANDSHAKE: Ephemeral key pair generated\n");
+            printf(YELLOW("HANDSHAKE") "Client ephemeral key pair generated\n");
             #endif
 
-            status conversion = getRawEphimeralKey(ek_client, cl_hello->eph_key_raw); 
+            status conversion = getRawEphemeralKey(ek_client, cl_hello->eph_key_raw); 
 
             if(conversion == status::ERROR){
-                printf("ERROR: Error in generating raw ephimeral key\n");
+                printf(ERROR_MESS "Error in generating raw ephemeral key\n");
                 return status::ERROR;
             }
             
             c_conn->randomBytesGenerator(cl_hello->nonce, NONCE_SIZE);
             #ifdef COMPLETE_INFO
-            printf("HANDSHAKE: Client nonce generated (%d bytes)\n", NONCE_SIZE);
-            printf("HANDSHAKE: Sending ClientHello = [ C_NONCE (%d) | C_EPH_PUB_KEY(%d) ], total size=%zu bytes\n", NONCE_SIZE, EPH_KEY_SIZE, sizeof(ClientHello));
+            printf(YELLOW("HANDSHAKE") "Client nonce generated (%d bytes)\n", NONCE_SIZE);
+            printf(YELLOW("HANDSHAKE") "Sending Client Hello...\n");
+            printf(FORMAT("ClientHello") "[ C_NONCE (%d) | C_EPH_PUB_KEY(%d) ] -> %zu bytes\n", NONCE_SIZE, EPH_KEY_SIZE, sizeof(ClientHello));
             #endif
 
             ssize_t byte_sent = c_conn->sendMess((unsigned char*)cl_hello, sizeof(ClientHello));
             if(byte_sent < 0){
-                printf("ERROR: Error while sending the Client Hello Message\n");
+                printf(ERROR_MESS "Error while sending the Client Hello Message\n");
                 return status::ERROR;
             }
 
             #ifdef COMPLETE_INFO
-            printf(COLOR_YELLOW "HANDSHAKE: " COLOR_RESET "Client Hello message sent successfully\n");
+            printf(YELLOW("HANDSHAKE") "Client Hello message sent successfully\n");
             #endif
 
             memcpy(conv.c_nonce, cl_hello->nonce, NONCE_SIZE);
             memcpy(conv.c_eph_key_raw, cl_hello->eph_key_raw, EPH_KEY_SIZE);
 
             #ifdef COMPLETE_INFO
-            printf(COLOR_YELLOW "HANDSHAKE: " COLOR_RESET "Waiting to receive ServerHello ...\n");
+            printf(YELLOW("HANDSHAKE") "Waiting to receive Server Hello...\n");
             #endif
             
             ssize_t received = c_conn->recvMess((unsigned char*)sv_hello, sizeof(ServerHello));
             
             if(received == 0){
-                printf(COLOR_RED "ERROR: " COLOR_RESET "Error in recieving the message. Closing the socket ...\n");
+                printf(ERROR_MESS "Error in receiving the message. Closing the socket...\n");
                 return status::ERROR;
             }
 
             #ifdef COMPLETE_INFO
-            printf(COLOR_YELLOW "HANDSHAKE: " COLOR_RESET "ServerHello received\n");
-            printf("format = [ NONCE (%d) | S_EPH_PUB_KEY (%d) | SIGNATURE (%d) ] -> %d total bytes\n", NONCE_SIZE, EPH_KEY_SIZE, SIGNATURE_SIZE, NONCE_SIZE + EPH_KEY_SIZE + SIGNATURE_SIZE);
+            printf(YELLOW("HANDSHAKE") "ServerHello received\n");
+            printf(FORMAT("ServerHello") "[ NONCE (%d) | S_EPH_PUB_KEY (%d) | SIGNATURE (%d) ] -> %d total bytes\n", NONCE_SIZE, EPH_KEY_SIZE, SIGNATURE_SIZE, NONCE_SIZE + EPH_KEY_SIZE + SIGNATURE_SIZE);
+            printf(YELLOW("HANDSHAKE") "Received %ld bytes\n",received);
             #endif
             
             memcpy(conv.s_nonce, sv_hello->nonce, NONCE_SIZE);
@@ -149,44 +159,44 @@ class ClientAsym : public CryptoAsym{
             outcome = verifySignature(s_handshake_pubkey, (unsigned char*)&conv, sizeof(Conversation), sv_hello->signature);
             
             if(outcome == status::INVALID){
-                printf(COLOR_RED "ERROR: " COLOR_RESET "Server Hello Signature is INVALID!\n");
+                printf(ERROR_MESS "Server Hello Signature is INVALID!\n");
                 return outcome;
 
             }else if(outcome == status::ERROR){
-                printf(COLOR_RED "ERROR: " COLOR_RESET "Error occurred during signature verification\n");
+                printf(ERROR_MESS "Error occurred during signature verification\n");
                 return outcome;
                 
             }
             #ifdef COMPLETE_INFO
-            printf(COLOR_YELLOW "HANDSHAKE: " COLOR_RESET "Server Hello Signature Verified\n");
+            printf(YELLOW("HANDSHAKE") "Server Hello Signature Verified\n");
             #endif
             
             EVP_PKEY* ek_server = nullptr;
-            outcome = rebuildEphimeralKey(conv.s_eph_key_raw, &ek_server);
+            outcome = rebuildEphemeralKey(conv.s_eph_key_raw, &ek_server);
 
             if(outcome == status::ERROR){
-                printf(COLOR_RED "ERROR: " COLOR_RESET "Error in rebuilding the ephemeral key\n");
+                printf(ERROR_MESS "Error in rebuilding the ephemeral key\n");
                 return outcome;
             }
 
             #ifdef COMPLETE_INFO
-            printf(COLOR_YELLOW "HANDSHAKE: " COLOR_RESET "Server ephemeral public key rebuilt successfully\n");
+            printf(YELLOW("HANDSHAKE") "Server ephemeral public key rebuilt successfully\n");
             #endif
             
             unsigned char shared_secret[SHARED_SECRET_SIZE];
 
             #ifdef COMPLETE_INFO
-            printf(COLOR_YELLOW "HANDSHAKE: " COLOR_RESET "Calculating shared secret (SIZE: %d) via ECDH...\n", SHARED_SECRET_SIZE);
+            printf(YELLOW("HANDSHAKE") "Calculating shared secret...\n");
             #endif
 
             outcome = calculateSharedSecret(ek_client, ek_server, shared_secret);
 
             if(outcome == status::ERROR){
-                printf(COLOR_RED "ERROR: " COLOR_RESET "Error in creating the shared secret!\n");
+                printf(ERROR_MESS "Error in creating the shared secret!\n");
                 return outcome;
             }
             #ifdef COMPLETE_INFO
-            printf(COLOR_YELLOW "HANDSHAKE: " COLOR_RESET "Shared secret obtained\n");
+            printf(YELLOW("HANDSHAKE") "Shared secret obtained\n");
             #endif
 
             unsigned char* nonces = (unsigned char*)&conv;
@@ -194,20 +204,22 @@ class ClientAsym : public CryptoAsym{
             unsigned char symmetric_key[AES_KEY_SIZE];
 
             #ifdef COMPLETE_INFO
-            printf(COLOR_YELLOW "HANDSHAKE: " COLOR_RESET "Deriving symmetric Session Key...\n");
+            printf(YELLOW("HANDSHAKE") "Deriving symmetric Session Key...\n");
             #endif
             outcome = getSessionKey(shared_secret, symmetric_key, nonces); 
 
             if(outcome == status::ERROR){
-                printf(COLOR_RED "ERROR: " COLOR_RESET "Error in generating the session key\n");
+                printf(ERROR_MESS "Error in generating the session key\n");
                 return outcome;
             }
 
+            #ifdef COMPLETE_INFO
+            printf(YELLOW("HANDSHAKE") "Session Key correctly generated\n");
+            printf(YELLOW("HANDSHAKE") "Initializing Symmetric Cipher\n\n");
+            #endif
+            
             c_conn->symCipherInit(symmetric_key);
             
-            #ifdef COMPLETE_INFO
-            printf(COLOR_YELLOW "HANDSHAKE: " COLOR_RESET "Session Key correctly generated\n");
-            #endif
             return status::OK;
         }
 };

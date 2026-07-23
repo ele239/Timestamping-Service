@@ -78,9 +78,9 @@ class ServerAsym : public CryptoAsym{
 
     status performHandshake(){
 
-        const int MAX_MESS_SIZE = max(sizeof(ClientHello),sizeof(ServerHello));
+        printf("\n" COLOR_YELLOW "SERVER HANDSHAKE BEGIN\n" COLOR_RESET);
 
-        //unsigned char conversation[CONVERSATION_SIZE];
+        const int MAX_MESS_SIZE = max(sizeof(ClientHello),sizeof(ServerHello));
 
         Conversation conversation;
 
@@ -91,17 +91,23 @@ class ServerAsym : public CryptoAsym{
 
         status outcome;
 
+        printf(YELLOW("HANDSHAKE") "Waiting to receive Client Hello...\n");
+
+        
         ssize_t byte_counter = s_conn->recvMess((unsigned char*)c_hello,sizeof(ClientHello));
 
-        printf("PH: Received %ld bytes\n",byte_counter);
+        printf(YELLOW("HANDSHAKE") "Client Hello Received\n");
+        printf(FORMAT("ClientHello") "[ C_NONCE (%d) | C_EPH_PUB_KEY(%d) ] -> %zu bytes\n", NONCE_SIZE, EPH_KEY_SIZE, sizeof(ClientHello));
+
+        printf(YELLOW("HANDSHAKE") "Received %ld bytes\n",byte_counter);
 
         if(byte_counter == 0){
-            printf("PH: CLOSED SOCKET\n");
+            printf(ERROR_MESS "CLOSED SOCKET\n");
             return status::ERROR;
         }
 
         if(byte_counter < 0){
-            printf("PH: RECV ERROR\n");
+            printf(ERROR_MESS "RECV ERROR\n");
             return status::ERROR;
         }
 
@@ -110,32 +116,34 @@ class ServerAsym : public CryptoAsym{
 
         EVP_PKEY* ek_client = nullptr;
 
-        outcome = rebuildEphimeralKey(c_hello->eph_key_raw, &ek_client);
+        outcome = rebuildEphemeralKey(c_hello->eph_key_raw, &ek_client);
 
+        printf(YELLOW("HANDSHAKE") "Client ephemeral public key rebuilt successfully\n");
 
         if(outcome == status::ERROR){
-            printf("PH: ERROR IN REBUILD!\n");
+            printf(ERROR_MESS "ERROR REBUILDING EPHEMERAL KEY!\n");
             return outcome;
         }
 
         EVP_PKEY* ek_server = generateEphemeralKey();
+        printf(YELLOW("HANDSHAKE") "Server ephemeral key pair generated\n");
 
         if(!ek_server){
-            printf("PH: ERROR IN GENERATE!\n");
+            printf(ERROR_MESS "EPHIMERAL KEY GENERATION FAILURE!\n");
             return status::ERROR;
         }
 
         if(!s_conn->randomBytesGenerator(s_hello->nonce,NONCE_SIZE)){
-            printf("PH: RandomBytesGenerator FAILURE\n");
+            printf(ERROR_MESS "RandomBytesGenerator FAILURE\n");
             return status::ERROR;
         }
 
-        printf("Nonce Generated\n");
+        printf(YELLOW("HANDSHAKE") "Server nonce Generated\n");
 
-        outcome = getRawEphimeralKey(ek_server, s_hello->eph_key_raw);
+        outcome = getRawEphemeralKey(ek_server, s_hello->eph_key_raw);
 
         if(outcome == status::ERROR){
-            printf("PH: ERROR IN RAW EK!\n");
+            printf(ERROR_MESS "ERROR IN RAW EPHEMERAL KEY!\n");
             return outcome;
         }
 
@@ -145,34 +153,48 @@ class ServerAsym : public CryptoAsym{
 
         generateSignature(handshake_privkey , (unsigned char*)&conversation , sizeof(Conversation), s_hello->signature);
 
-        printf("SIGNATURE GENERATED\n");
+        printf(YELLOW("HANDSHAKE") "Signed the entire conversation\n");
+
+        printf(YELLOW("HANDSHAKE") "Sending Server Hello...\n");
+        printf(FORMAT("ServerHello") "[ NONCE (%d) | S_EPH_PUB_KEY (%d) | SIGNATURE (%d) ] -> %d total bytes\n", NONCE_SIZE, EPH_KEY_SIZE, SIGNATURE_SIZE, NONCE_SIZE + EPH_KEY_SIZE + SIGNATURE_SIZE);
 
         byte_counter = s_conn->sendMess((unsigned char*)s_hello, sizeof(ServerHello));
-        printf("Sent %ld bytes\n",byte_counter);
+
+        #ifdef COMPLETE_INFO
+            printf(YELLOW("HANDSHAKE") "Calculating shared secret...\n");
+        #endif
 
         outcome = calculateSharedSecret(ek_server, ek_client, buffer);
 
         if(outcome == status::ERROR){
-            printf("PH: ERRORE IN SHARED SECRET!\n");
+            printf(ERROR_MESS "ERROR IN SHARED SECRET GENERATION!\n");
             return outcome;
         }
 
-        printf("SHARED SECRET OBTAINED\n");
+        #ifdef COMPLETE_INFO
+            printf(YELLOW("HANDSHAKE") "Shared secret obtained\n");
+        #endif
 
-        printf("SHARED SECRET: ");
 
         unsigned char symmetric_key[AES_KEY_SIZE];
         unsigned char* nonces = (unsigned char*)&conversation;
+
+        #ifdef COMPLETE_INFO
+            printf(YELLOW("HANDSHAKE") "Deriving symmetric Session Key...\n");
+        #endif
         outcome = getSessionKey(buffer, symmetric_key, nonces);
         
         if(outcome == status::ERROR){
-            printf("PH: ERRORE IN GET SESSION KEY!\n");
+            printf(ERROR_MESS "Error in generating the session key\n");
             return outcome;
         }
-
-        s_conn->symCipherInit(symmetric_key);
         
-        printf("Session Key Extracted\n");
+        #ifdef COMPLETE_INFO
+        printf(YELLOW("HANDSHAKE") "Session Key correctly generated\n");
+        printf(YELLOW("HANDSHAKE") "Initializing Symmetric Cipher\n\n");
+        #endif
+        
+        s_conn->symCipherInit(symmetric_key);
 
         return status::OK;
     }

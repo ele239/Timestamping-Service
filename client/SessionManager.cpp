@@ -74,24 +74,24 @@ class SessionManager{
 
         FILE* file = fopen(path, "rb");
         if(!file){
-            printf("ERROR: Error occurred while operning the file\n");
+            printf(ERROR_MESS "Error occurred while opening the file\n");
             return nullptr;
         }
         #ifdef COMPLETE_INFO
-        printf("\nREAD_FILE: File '%s' opened successfully\n", path);
+        printf("\n" BLUE("READ_FILE") "File '%s' opened successfully\n", path);
         #endif
 
         fseek(file, 0, SEEK_END);
         long dim = ftell(file);
         
         if(dim < 0){
-            printf("ERROR: Invalid file dimension\n");
+            printf(ERROR_MESS "Can't read, Invalid file dimension\n");
             fclose(file);
             return nullptr;
         }
         
         if(dim == 0){
-            printf("ERROR: File is empty\n");
+            printf(ERROR_MESS "Can't read, File is empty\n");
             return nullptr;
         }
         
@@ -111,7 +111,7 @@ class SessionManager{
         }
 
         #ifdef COMPLETE_INFO
-        printf("READ_FILE: File %s successfully load into memory\n", path);
+        printf(BLUE("READ_FILE") "File %s successfully loaded into memory\n", path);
         #endif
 
         fclose(file);
@@ -124,10 +124,10 @@ class SessionManager{
             char username[MAX_USERNAME_LEN];
             char pwd[MAX_PWD_LEN];
             
-            printf("\n-------------------------- LOGIN --------------------------\n");
-            printf("Username: ");
+            printf("\n\n-------------------------- LOGIN --------------------------\n");
+            printf(INDIGO("Username"));
             fgets(username, sizeof(username), stdin);
-            printf("Password: ");
+            printf(INDIGO("Password"));
             fgets(pwd, sizeof(pwd), stdin);
 
             size_t username_len = strlen(username);
@@ -141,34 +141,31 @@ class SessionManager{
             memcpy(&credentials[username_len], pwd, pwd_len);
 
             #ifdef COMPLETE_INFO
-            printf("\nLOGIN: Credentials concatenated (username || password) - total length %d bytes\n", credentials_len);
-            #endif
-
-            #ifdef COMPLETE_INFO
-            printf("LOGIN: Sending credentials to the server...\n");
+            printf("\n" SKYBLUE("LOGIN")" Sending credentials to the server...\n");
+            printf(FORMAT("Credentials") "[ username + \'\\0\' | password + \'\\0\' ] -> %d bytes\n", credentials_len);
             #endif
             
             int bytes_sent = clientConn->encSend(credentials, credentials_len);
 
             if(bytes_sent < 0){
-                printf("ERROR: Error while sending the credentials to the server\n");
+                printf(ERROR_MESS "Error while sending the credentials to the server\n");
                 continue;
             }
             #ifdef COMPLETE_INFO
-            printf("LOGIN: Credentials sent, waiting for server response...\n");
+            printf(SKYBLUE("LOGIN") "Credentials sent, waiting for server response...\n");
             #endif
 
             status outcome = recvOutcome();
             if(outcome == status::INVALID){
-                printf("Invalid credentials\n");
+                printf(WARNING_MESS "Invalid credentials\n");
                 continue;
             }
             else if(outcome == status::ERROR){
-                printf("ERROR: Invalid credentials inserted for %d times\n", 3);
+                printf(ERROR_MESS "Invalid credentials inserted for %d times\n", 3);
                 return status::ERROR;
             }
             else{
-                printf("Authentication succeeded\n");
+                printf(SKYBLUE("LOGIN") "Authentication succeeded\n");
                 break;
             }
         }
@@ -178,49 +175,52 @@ class SessionManager{
         status balance(){
 
         #ifdef COMPLETE_INFO
-        printf("\n BALANCE: Sending balance request to the server...\n");
+        printf("\n" YELLOW("BALANCE") "Sending balance request to the server...\n");
         #endif
 
         status outcome = sendReq(request::BALANCE);
         if(outcome == status::ERROR){
-            printf("ERROR: Error while sending the balance request to the server\n");
+            printf(ERROR_MESS "Error while sending the balance request to the server\n");
             return status::ERROR;
         }
         #ifdef COMPLETE_INFO
-        printf("BALANCE: request correctly sent to the server\n");
+        printf(YELLOW("BALANCE") "Request correctly sent to the server\n");
         #endif
 
         #ifdef COMPLETE_INFO
-        printf("BALANCE: Waiting for server response ...\n");
+        printf(YELLOW("BALANCE") "Waiting for server response ...\n");
         #endif
         
         ssize_t bytes_recv = clientConn->decRecv(buffer);
         if(bytes_recv < 0){
-            printf("ERROR: Error occurred while receiving the balance\n");
+            printf(ERROR_MESS "Error occurred while receiving the balance\n");
             return status::ERROR;
         }
+
+        printf(FORMAT("Timestamp Balance") "[ Status (1) | Remaining (4) | Consumed (4) ] -> 9 bytes\n");
+        
+        printf(YELLOW("BALANCE") "Received %zd bytes from server\n", bytes_recv);
+        /*
         #ifdef COMPLETE_INFO
-        printf("BALANCE: Received %zd bytes from server\n", bytes_recv);
-        printf("BALANCE: - Number of timestamps already consumed (%ld bytes)\n", sizeof(int));
-        printf("BALANCE: - Number of timestampsthe user can still request (%ld bytes)\n", sizeof(int));
+        printf(YELLOW("BALANCE") "- Number of timestamps already consumed (%ld bytes)\n", sizeof(int));
+        printf(YELLOW("BALANCE") "- Number of timestampsthe user can still request (%ld bytes)\n", sizeof(int));
         #endif
+        */
 
         ResponseMess* mess = (ResponseMess*) buffer;
 
         if(mess->sts == status::ERROR){
-            printf("ERROR: Error occurred while calculating the balance\n");
+            printf(ERROR_MESS "Error occurred while calculating the balance\n");
             return status::ERROR;
         }
 
         TimestampInfo t;
         memcpy(&t, mess->payload, sizeof(t));
-        #ifdef COMPLETE_INFO
-        printf("BALANCE: Successfully parsed TimestampInfo from payload\n");
-        #endif
 
 
-        printf("Timestamps already consumed: %d\n", t.timestamps_remaining);
-        printf("Timestamps that can still be requested: %d\n", t.timestamps_consumed);
+        printf("\n" BLUE("USER BALANCE"));
+        printf("\n\tTimestamps that can still be requested: %d\n", t.timestamps_consumed);
+        printf("\tTimestamps already consumed: %d\n", t.timestamps_remaining);
 
         return status::OK;
     }
@@ -229,7 +229,7 @@ class SessionManager{
         
         FILE* file = fopen(SIGNATURE_FILE_PATH, "ab");
         if(!file){
-            printf("ERROR: Error while opening the signature file\n");
+            printf(ERROR_MESS "Error while opening the signature file\n");
             return status::ERROR;
         }
 
@@ -237,7 +237,7 @@ class SessionManager{
 
         size_t bytes_written = fwrite(signature, 1, len, file);
         if(bytes_written < len){
-            printf("ERROR: Error writing to signature file\n");
+            printf(ERROR_MESS "Error writing to signature file\n");
             fclose(file);
             return status::ERROR;
         }
@@ -245,7 +245,7 @@ class SessionManager{
         unsigned char end_string = '\n';
         bytes_written = fwrite(&end_string, 1, 1, file);
         if(bytes_written < 1){
-            printf("ERROR: Error writing to signature file\n");
+            printf(ERROR_MESS "Error writing to signature file\n");
             fclose(file);
             return status::ERROR;
         }
@@ -259,7 +259,7 @@ class SessionManager{
         
         FILE* file = fopen(SIGNATURE_FILE_PATH, "rb");
         if(!file){
-            printf("ERROR: Error while opening the file\n");
+            printf(ERROR_MESS "Error while opening the file\n");
             return status::ERROR;
         }
 
@@ -290,7 +290,7 @@ class SessionManager{
         unsigned int file_size;
         unsigned char* message = readFromFile(path, &file_size);
         if(!message){
-            printf("ERROR: Error occurred while reading from file\n");
+            printf(ERROR_MESS "Error occurred while reading from file\n");
             free(message);
             return status::ERROR;
         }
@@ -304,7 +304,7 @@ class SessionManager{
     }
 
     status timestamp(){
-        printf("Insert the path of the document that has to be signed: ");
+        printf(INDIGO("Insert the path of the document that has to be signed"));
 
         char path[MAX_PATH_LEN];
         unsigned char saved_hash[HASH_SIZE];
@@ -313,7 +313,7 @@ class SessionManager{
 
         status outcome = getDocumentHash(path, saved_hash);
         if(outcome != status::OK){
-            printf("ERROR: Document hashing failed\n");
+            printf(ERROR_MESS "Document hashing failed\n");
             return status::ERROR;
         }
 
@@ -322,41 +322,40 @@ class SessionManager{
         m->type = request::SIGN;
         
         #ifdef COMPLETE_INFO
-        printf("\nSIGN_DOCUMENT: Hash of the document calculated successfully\n");
+        printf("\n" CYAN("SIGN_DOCUMENT") "Hash of the document calculated successfully\n");
         #endif
 
         #ifdef COMPLETE_INFO
-        printf("SIGN_DOCUMENT: Sending hash to server (%d bytes)...\n", 1 + HASH_SIZE);
-        printf("SIGN_DOCUMENT: - Type of request (SIGN REQUEST - 1 byte)\n");
-        printf("SIGN_DOCUMENT: - Hash message (%d bytes)...\n", HASH_SIZE);
+        printf(CYAN("SIGN_DOCUMENT") "Sending hash to server...\n");
+        printf(FORMAT("Sign Request") "[ SIGN_REQUEST (1) | HASH (%d) ] -> %d bytes\n", HASH_SIZE, 1 + HASH_SIZE);
         #endif
         
         ssize_t bytes_sent = clientConn->encSend((unsigned char*) m, HASH_SIZE + 1);
         if(bytes_sent < 0){
-            printf("ERROR: Error occurred while sending the hash of the message\n");
+            printf(ERROR_MESS "Error occurred while sending the hash of the message\n");
             return status::ERROR;
         }
 
         #ifdef COMPLETE_INFO
-        printf("SIGN_DOCUMENT: Waiting for signed response from server...\n");
+        printf(CYAN("SIGN_DOCUMENT") "Waiting for signed response from server...\n");
+        printf(FORMAT("Sign Response") "[ STATUS (1) | HASH (%d) | TIMESTAMP (%d) | SIGNATURE (%d) ] -> %d bytes\n",HASH_SIZE, TS_SIZE, SIGNATURE_SIZE, 1 + HASH_SIZE + TS_SIZE + SIGNATURE_SIZE);
         #endif
 
         ssize_t bytes_recv = clientConn->decRecv(buffer);
 
         if(bytes_recv < 0){
-            printf("ERROR: Error occurred while receiving the message\n");
+            printf(ERROR_MESS "Error occurred while receiving the message\n");
             return status::ERROR;
         }
 
         if(bytes_recv == 0){
-            printf("ERROR: Empty message received by the server\n");
+            printf(ERROR_MESS "Empty message received by the server\n");
             return status::ERROR;
         }
 
         #ifdef COMPLETE_INFO
 
-        printf("SIGN_DOCUMENT: RESPONSE STRUCTURE\n");
-        printf("[ STATUS (1) | HASH (%d) | TIMESTAMP (%d) | SIGNATURE (%d) ] -> %d bytes total\n",HASH_SIZE, TS_SIZE, SIGNATURE_SIZE, 1 + HASH_SIZE + TS_SIZE + SIGNATURE_SIZE);
+        printf(CYAN("SIGN_DOCUMENT") "Received %ld bytes\n", bytes_recv);
         
         #endif
 
@@ -364,11 +363,11 @@ class SessionManager{
         outcome = sig_mess->sts;
 
         if(outcome == status::INVALID){
-            printf("All timestamps have been used\n");
+            printf(WARNING_MESS "All timestamps have been used\n");
             return status::ERROR;
         }
         else if(outcome == status::ERROR){
-            printf("ERROR: Error occurred while receiving the signature\n");
+            printf(ERROR_MESS "Error occurred while receiving the signature\n");
             return status::ERROR;
         }
 
@@ -385,17 +384,17 @@ class SessionManager{
         switch (outcome)
         {
         case status::OK:
-            printf("SIGN_DOCUMENT: Signature Status -> OK! Timestamp: ");
+            printf(CYAN("SIGN_DOCUMENT") "Signature Status -> " COLOR_GREEN "OK" COLOR_RESET "! Timestamp: ");
             printTimestampOf(verify_buffer);
             outcome = storeSignature(verify_buffer);
             break;
 
         case status::INVALID:
-            printf("SIGN_DOCUMENT: Signature Status -> INVALID!!!! BEWARE!\n");        
+            printf(CYAN("SIGN_DOCUMENT") "Signature Status -> " COLOR_RED "INVALID" COLOR_RESET "!!!! BEWARE!\n");        
             break;
 
         case status::ERROR:
-            printf("ERROR: An error occurred during signature verification.\n");
+            printf(ERROR_MESS "An error occurred during signature verification.\n");
             break;
                 
         default:
@@ -417,7 +416,7 @@ class SessionManager{
     }
 
     status verify(){
-        printf("\nInsert the path of the document whose signature you want to verify: ");
+        printf("\n" INDIGO("Insert the path of the document whose signature you want to verify"));
 
         char path[MAX_PATH_LEN];
         
@@ -425,12 +424,12 @@ class SessionManager{
 
         status outcome = getDocumentHash(path, buffer);
         if(outcome != status::OK){
-            printf("ERROR: Document hashing failed\n");
+            printf(ERROR_MESS "Document hashing failed\n");
             return status::ERROR;
         }
         
         #ifdef COMPLETE_INFO
-        printf("\nVERIFY_SIGNATURE: Hash of the document calculated successfully\n");
+        printf("\n" PURPLE("VERIFY_SIGNATURE") "Hash of the document calculated successfully\n");
         #endif
 
         vector<unsigned char*>* doc_list = new vector<unsigned char*>(); 
@@ -445,13 +444,13 @@ class SessionManager{
         outcome = searchSignature(buffer,doc_list);
 
         if(outcome == status::ERROR){
-            printf("ERROR: Couldn't search any signed documents\n");
+            printf(ERROR_MESS "Couldn't search any signed documents\n");
             clearList();
             return status::ERROR;
         }
 
         if(doc_list->empty()){
-            printf("WARNING: No signature linked to file %s was found!\n\n",path);
+            printf(WARNING_MESS "No signature linked to file %s was found!\n\n",path);
             clearList();
             return status::INVALID;
         }
@@ -459,10 +458,11 @@ class SessionManager{
         unsigned int signature_pos = HASH_SIZE + TS_SIZE;
 
         #ifdef COMPLETE_INFO
-        printf("VERIFY_SIGNATURE: Found %ld signatures linked to document \"%s\"\n", doc_list->size(), path);
-        printf("VERIFY_SIGNATURE: Proceeding to verify the signatures sent by the server\n");
+        printf(PURPLE("VERIFY_SIGNATURE") "Found %ld signatures linked to document \"%s\"\n", doc_list->size(), path);
+        printf(PURPLE("VERIFY_SIGNATURE") "Proceeding to verify the signatures found\n\n");
         #endif
 
+        printf(SKYBLUE("SIGNATURES") "\n");
         for(auto doc : *doc_list){
     
             outcome = clientAsym->verifySignature(clientAsym->getSignPubKey(), doc, HASH_SIZE + TS_SIZE, &doc[signature_pos]);
@@ -470,16 +470,16 @@ class SessionManager{
             switch (outcome)
             {
             case status::OK:
-                printf("- Signature of file \"%s\" is OK! Signature Timestamp: ", path);        
+                printf(" - Signature ->     " COLOR_GREEN "OK" COLOR_RESET " \t  Timestamp: ");        
                 printTimestampOf(doc);
                 break;
 
             case status::INVALID:
-                printf("- Beware! Signature of file \"%s\" is INVALID!\n", path);
+                printf(" - Signature ->  " COLOR_RED "INVALID" COLOR_RESET "  ---------\n");
                 break;
 
             case status::ERROR:
-                printf("- An error occurred during signature verification.\n");
+                printf(" - " ERROR_MESS "An error occurred during this signature verification.\n");
                 break;
                     
             default:

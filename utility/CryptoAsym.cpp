@@ -11,7 +11,7 @@ class CryptoAsym{
         
         FILE *f = fopen(filename, "rb");
         if (!f) {
-            printf("ERROR WHEN OPENING PUBKEY FILE (path: %s)\n",filename);
+            printf(ERROR_MESS "CAN'T OPEN PUBKEY FILE (path: %s)\n",filename);
             return NULL;
         }
         
@@ -19,7 +19,7 @@ class CryptoAsym{
         fclose(f);
         
         if (!pkey) {
-            printf("ERROR WHEN READING PUBKEY (path: %s)\n",filename);
+            printf(ERROR_MESS "CAN'T READ PUBKEY (path: %s)\n",filename);
             return nullptr;
         }
         
@@ -29,7 +29,7 @@ class CryptoAsym{
     EVP_PKEY* loadPrivateKey(const char* filename) {
         FILE *f = fopen(filename, "rb");
         if (!f) {
-            printf("ERROR WHEN OPENING PRIVKEY FILE (path: %s)\n",filename);
+            printf(ERROR_MESS "CAN'T OPEN PRIVKEY FILE (path: %s)\n",filename);
             return NULL;
         }
         
@@ -37,7 +37,7 @@ class CryptoAsym{
         fclose(f);
 
         if (!pkey) {
-            printf("ERROR WHEN READING PRIVKEY (path: %s)\n",filename);
+            printf(ERROR_MESS "CAN'T READ PRIVKEY (path: %s)\n",filename);
             return nullptr;
         }
 
@@ -46,30 +46,26 @@ class CryptoAsym{
 
     EVP_PKEY* generateEphemeralKey() {
         EVP_PKEY *pkey = EVP_PKEY_Q_keygen(NULL, NULL, "X25519");
-        if (!pkey) 
-            printf("EPHIMERAL KEY FAILURE!\n");
         
         return pkey;
     }
 
-    status getRawEphimeralKey(EVP_PKEY* ek, unsigned char* raw_key){
+    status getRawEphemeralKey(EVP_PKEY* ek, unsigned char* raw_key){
         size_t key_len = EPH_KEY_SIZE;
 
         if (EVP_PKEY_get_raw_public_key(ek, raw_key, &key_len) != 1) {
-            printf("rawEphimeral: CONVERSION ERROR!\n");
+            printf(ERROR_MESS "KEY CONVERSION ERROR!\n");
             return status::ERROR;
         }
 
         return status::OK;
     }
 
-    status rebuildEphimeralKey(unsigned char* raw_key, EVP_PKEY** ek){
+    status rebuildEphemeralKey(unsigned char* raw_key, EVP_PKEY** ek){
         *ek = EVP_PKEY_new_raw_public_key(EVP_PKEY_X25519, NULL, raw_key, EPH_KEY_SIZE);
         
-        if (!(*ek)) {
-            printf("rebuildEphimeral: REBUILD ERROR!\n");
+        if (!(*ek)) 
             return status::ERROR;
-        }
 
         return status::OK;
     }
@@ -122,7 +118,7 @@ class CryptoAsym{
         *p = OSSL_PARAM_construct_end();
 
         if (EVP_KDF_derive(kctx, session_key, SHARED_SECRET_SIZE, params) <= 0) {
-            printf("getSessionKey: ERROR IN MASTER SECRET DERIVATION\n");
+            printf(ERROR_MESS "ERROR IN MASTER SECRET DERIVATION\n");
             return status::ERROR;
         }
 

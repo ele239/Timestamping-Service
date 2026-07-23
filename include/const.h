@@ -59,7 +59,33 @@
 #define COLOR_GREEN   "\033[32m"
 #define COLOR_RED     "\033[31m"
 #define COLOR_YELLOW  "\033[33m"
+#define COLOR_BLUE    "\033[34m"
+#define COLOR_SKYBLUE "\033[38;2;135;206;235m"
+#define COLOR_INDIGO  "\033[38;2;75;0;130m"
+#define COLOR_PURPLE  "\033[38;2;128;0;128m"
+#define COLOR_ORANGE  "\033[38;2;255;165;0m"
+#define COLOR_AQUA "\033[38;2;64;224;208m"
+#define COLOR_CYAN "\033[36m"
+
 #define COLOR_RESET    "\033[0m"
+
+#define COLOR_STRING(color, string) color string COLOR_RESET ": "
+
+#define YELLOW(string)  COLOR_STRING(COLOR_YELLOW, string)
+#define GREEN(string)   COLOR_STRING(COLOR_GREEN, string)
+#define BLUE(string)    COLOR_STRING(COLOR_BLUE, string)
+#define SKYBLUE(string) COLOR_STRING(COLOR_SKYBLUE, string)
+#define INDIGO(string)  COLOR_STRING(COLOR_INDIGO, string)
+#define PURPLE(string)  COLOR_STRING(COLOR_PURPLE, string)
+#define ORANGE(string)  COLOR_STRING(COLOR_ORANGE, string)
+#define AQUA(string)    COLOR_STRING(COLOR_AQUA, string)
+#define CYAN(string)    COLOR_STRING(COLOR_CYAN, string)
+
+
+ 
+#define WARNING_MESS ORANGE("WARNING")
+#define ERROR_MESS COLOR_RED "ERROR" COLOR_RESET ": "
+#define FORMAT(string) COLOR_AQUA "FORMAT " "(" COLOR_RESET string COLOR_AQUA ") => " COLOR_RESET
 
 using namespace std;
 using json = nlohmann::json;
