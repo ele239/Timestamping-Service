@@ -43,7 +43,7 @@ void th_kbd(){
         else if(!strcasecmp("sign", command)){
             outcome = session.timestamp();
             if(outcome == status::ERROR){
-                printf(ERROR_MESS "Error in the document signature\n");
+                printf(ERROR_MESS "\nError in the document signature\n");
                 break;
             }
         }
@@ -69,6 +69,43 @@ void th_kbd(){
 
 
 int main(int argc, char* argv[]){
+
+    while(true){
+        
+        printf("\n-------------------------- COMMAND INTERFACE --------------------------\n");
+        printf(INDIGO("Insert a valid command")"\n");
+        printf("- " YELLOW("Login") "connect to the Time-Stamping server\n");
+        printf("- " YELLOW("Verify") "verify a document signature\n");
+        printf("- " YELLOW("Exit") "quit the application\n");
+
+        printf(INDIGO("Insert command"));
+        char command[MAX_COMMAND_LEN];
+        fgets(command, MAX_COMMAND_LEN, stdin);
+        command[strlen(command)-1] = '\0';
+
+        #ifdef COMPLETE_INFO
+        printf( INDIGO("COMMAND") "Received command '%s' from user\n", command);
+        #endif
+        
+        status outcome;
+        if(!strcasecmp("login", command)){
+            break;
+        }
+        else if(!strcasecmp("exit", command)){
+            printf(SKYBLUE("STATUS") "Exiting ...\n");
+            break;
+        }
+        else if(!strcasecmp("verify", command)){
+            outcome = session.verify();
+            if(outcome == status::ERROR){
+                printf(ERROR_MESS "Error in signature verification, quitting.\n");
+                return EXIT_FAILURE;
+            }
+        }else
+            printf(INDIGO("COMMAND") "Invalid command inserted\n");
+            
+        this_thread::sleep_for(2s); 
+    }
 
     int port = (argc == 1) ? DEFAULT_PORT : atoi(argv[1]);
     #ifdef COMPLETE_INFO

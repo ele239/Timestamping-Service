@@ -112,7 +112,7 @@ int main(int argc, char* argv[]){
     }
 
     printf(GREEN("MAIN") "Server is turning on -> Port: %d\n",port);
-    printf(GREEN("MAIN") "Starting Listen Thread...");
+    printf(GREEN("MAIN") "Starting Listen Thread...\n");
     
     jthread th_listener(th_listen, port);
 

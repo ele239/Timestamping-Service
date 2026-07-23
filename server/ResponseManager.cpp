@@ -137,8 +137,11 @@ class ResponseManager{
         }
 
             printf(INDIGO("SEND_BALANCE") "Timestamp balance sent.\n");
-            printf(FORMAT("Timestamp Balance") "[ Status (1) | Remaining (4) | Consumed (4) ] -> 9 bytes\n");
-        
+
+            #ifdef MESSAGE_FORMAT
+                printf(FORMAT("Timestamp Balance") "[ Status (1) | Remaining (4) | Consumed (4) ] -> 9 bytes\n");
+            #endif
+
         return status::OK;
     }
 
@@ -151,7 +154,9 @@ class ResponseManager{
 
         printf("\n" GREEN("SIGN_DOC") "Signature request received. Providing response...\n");
 
-        printf(FORMAT("Sign Request") "[ SIGN_REQUEST (1) | HASH (%d) ] -> %d bytes\n", HASH_SIZE, 1 + HASH_SIZE);
+        #ifdef MESSAGE_FORMAT
+            printf(FORMAT("Sign Request") "[ SIGN_REQUEST (1) | HASH (%d) ] -> %d bytes\n", HASH_SIZE, 1 + HASH_SIZE);
+        #endif
 
         SignatureMess* s_mess = (SignatureMess*) buffer;
 
@@ -193,8 +198,10 @@ class ResponseManager{
             return status::ERROR;
         }
 
-        printf(FORMAT("Sign Response") "[ STATUS (1) | HASH (%d) | TIMESTAMP (%d) | SIGNATURE (%d) ] -> %d bytes\n",HASH_SIZE, TS_SIZE, SIGNATURE_SIZE, 1 + HASH_SIZE + TS_SIZE + SIGNATURE_SIZE);
-
+        #ifdef MESSAGE_FORMAT
+            printf(FORMAT("Sign Response") "[ STATUS (1) | HASH (%d) | TIMESTAMP (%d) | SIGNATURE (%d) ] -> %d bytes\n",HASH_SIZE, TS_SIZE, SIGNATURE_SIZE, 1 + HASH_SIZE + TS_SIZE + SIGNATURE_SIZE);
+        #endif
+        
         return status::OK;
     }
 

@@ -97,9 +97,12 @@ class ServerAsym : public CryptoAsym{
         ssize_t byte_counter = s_conn->recvMess((unsigned char*)c_hello,sizeof(ClientHello));
 
         printf(YELLOW("HANDSHAKE") "Client Hello Received\n");
-        printf(FORMAT("ClientHello") "[ C_NONCE (%d) | C_EPH_PUB_KEY(%d) ] -> %zu bytes\n", NONCE_SIZE, EPH_KEY_SIZE, sizeof(ClientHello));
-
-        printf(YELLOW("HANDSHAKE") "Received %ld bytes\n",byte_counter);
+        
+        #ifdef MESSAGE_FORMAT
+            printf(FORMAT("ClientHello") "[ C_NONCE (%d) | C_EPH_PUB_KEY(%d) ] -> %zu bytes\n", NONCE_SIZE, EPH_KEY_SIZE, sizeof(ClientHello));
+            
+            printf(YELLOW("HANDSHAKE") "Received %ld bytes\n",byte_counter);
+        #endif
 
         if(byte_counter == 0){
             printf(ERROR_MESS "CLOSED SOCKET\n");
@@ -156,8 +159,11 @@ class ServerAsym : public CryptoAsym{
         printf(YELLOW("HANDSHAKE") "Signed the entire conversation\n");
 
         printf(YELLOW("HANDSHAKE") "Sending Server Hello...\n");
-        printf(FORMAT("ServerHello") "[ NONCE (%d) | S_EPH_PUB_KEY (%d) | SIGNATURE (%d) ] -> %d total bytes\n", NONCE_SIZE, EPH_KEY_SIZE, SIGNATURE_SIZE, NONCE_SIZE + EPH_KEY_SIZE + SIGNATURE_SIZE);
 
+        #ifdef MESSAGE_FORMAT
+            printf(FORMAT("ServerHello") "[ NONCE (%d) | S_EPH_PUB_KEY (%d) | SIGNATURE (%d) ] -> %d total bytes\n", NONCE_SIZE, EPH_KEY_SIZE, SIGNATURE_SIZE, NONCE_SIZE + EPH_KEY_SIZE + SIGNATURE_SIZE);
+        #endif
+        
         byte_counter = s_conn->sendMess((unsigned char*)s_hello, sizeof(ServerHello));
 
         #ifdef COMPLETE_INFO

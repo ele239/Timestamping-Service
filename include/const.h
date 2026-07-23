@@ -54,8 +54,6 @@
 // Max timestamp size
 #define TS_SIZE 8
 
-#define COMPLETE_INFO
-
 #define COLOR_GREEN   "\033[32m"
 #define COLOR_RED     "\033[31m"
 #define COLOR_YELLOW  "\033[33m"
@@ -80,12 +78,13 @@
 #define ORANGE(string)  COLOR_STRING(COLOR_ORANGE, string)
 #define AQUA(string)    COLOR_STRING(COLOR_AQUA, string)
 #define CYAN(string)    COLOR_STRING(COLOR_CYAN, string)
-
-
  
 #define WARNING_MESS ORANGE("WARNING")
 #define ERROR_MESS COLOR_RED "ERROR" COLOR_RESET ": "
 #define FORMAT(string) COLOR_AQUA "FORMAT " "(" COLOR_RESET string COLOR_AQUA ") => " COLOR_RESET
+
+#define COMPLETE_INFO
+//#define MESSAGE_FORMAT
 
 using namespace std;
 using json = nlohmann::json;

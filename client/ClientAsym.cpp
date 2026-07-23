@@ -117,9 +117,12 @@ class ClientAsym : public CryptoAsym{
             
             c_conn->randomBytesGenerator(cl_hello->nonce, NONCE_SIZE);
             #ifdef COMPLETE_INFO
-            printf(YELLOW("HANDSHAKE") "Client nonce generated (%d bytes)\n", NONCE_SIZE);
-            printf(YELLOW("HANDSHAKE") "Sending Client Hello...\n");
-            printf(FORMAT("ClientHello") "[ C_NONCE (%d) | C_EPH_PUB_KEY(%d) ] -> %zu bytes\n", NONCE_SIZE, EPH_KEY_SIZE, sizeof(ClientHello));
+                printf(YELLOW("HANDSHAKE") "Client nonce generated (%d bytes)\n", NONCE_SIZE);
+                printf(YELLOW("HANDSHAKE") "Sending Client Hello...\n");
+            
+                #ifdef MESSAGE_FORMAT
+                    printf(FORMAT("ClientHello") "[ C_NONCE (%d) | C_EPH_PUB_KEY(%d) ] -> %zu bytes\n", NONCE_SIZE, EPH_KEY_SIZE, sizeof(ClientHello));
+                #endif
             #endif
 
             ssize_t byte_sent = c_conn->sendMess((unsigned char*)cl_hello, sizeof(ClientHello));
@@ -147,9 +150,11 @@ class ClientAsym : public CryptoAsym{
             }
 
             #ifdef COMPLETE_INFO
-            printf(YELLOW("HANDSHAKE") "ServerHello received\n");
-            printf(FORMAT("ServerHello") "[ NONCE (%d) | S_EPH_PUB_KEY (%d) | SIGNATURE (%d) ] -> %d total bytes\n", NONCE_SIZE, EPH_KEY_SIZE, SIGNATURE_SIZE, NONCE_SIZE + EPH_KEY_SIZE + SIGNATURE_SIZE);
-            printf(YELLOW("HANDSHAKE") "Received %ld bytes\n",received);
+                printf(YELLOW("HANDSHAKE") "ServerHello received\n");
+                #ifdef MESSAGE_FORMAT    
+                    printf(FORMAT("ServerHello") "[ NONCE (%d) | S_EPH_PUB_KEY (%d) | SIGNATURE (%d) ] -> %d total bytes\n", NONCE_SIZE, EPH_KEY_SIZE, SIGNATURE_SIZE, NONCE_SIZE + EPH_KEY_SIZE + SIGNATURE_SIZE);
+                    printf(YELLOW("HANDSHAKE") "Received %ld bytes\n",received);
+                    #endif
             #endif
             
             memcpy(conv.s_nonce, sv_hello->nonce, NONCE_SIZE);

@@ -141,8 +141,10 @@ class SessionManager{
             memcpy(&credentials[username_len], pwd, pwd_len);
 
             #ifdef COMPLETE_INFO
-            printf("\n" SKYBLUE("LOGIN")" Sending credentials to the server...\n");
-            printf(FORMAT("Credentials") "[ username + \'\\0\' | password + \'\\0\' ] -> %d bytes\n", credentials_len);
+                printf("\n" SKYBLUE("LOGIN")" Sending credentials to the server...\n");
+                #ifdef MESSAGE_FORMAT
+                    printf(FORMAT("Credentials") "[ username + \'\\0\' | password + \'\\0\' ] -> %d bytes\n", credentials_len);
+                #endif
             #endif
             
             int bytes_sent = clientConn->encSend(credentials, credentials_len);
@@ -197,9 +199,13 @@ class SessionManager{
             return status::ERROR;
         }
 
-        printf(FORMAT("Timestamp Balance") "[ Status (1) | Remaining (4) | Consumed (4) ] -> 9 bytes\n");
-        
-        printf(YELLOW("BALANCE") "Received %zd bytes from server\n", bytes_recv);
+        #ifdef COMPLETE_INFO
+        #ifdef MESSAGE_FORMAT
+            printf(FORMAT("Timestamp Balance") "[ Status (1) | Remaining (4) | Consumed (4) ] -> 9 bytes\n");
+            
+            printf(YELLOW("BALANCE") "Received %zd bytes from server\n", bytes_recv);
+            #endif
+        #endif
         /*
         #ifdef COMPLETE_INFO
         printf(YELLOW("BALANCE") "- Number of timestamps already consumed (%ld bytes)\n", sizeof(int));
@@ -326,8 +332,11 @@ class SessionManager{
         #endif
 
         #ifdef COMPLETE_INFO
-        printf(CYAN("SIGN_DOCUMENT") "Sending hash to server...\n");
-        printf(FORMAT("Sign Request") "[ SIGN_REQUEST (1) | HASH (%d) ] -> %d bytes\n", HASH_SIZE, 1 + HASH_SIZE);
+            printf(CYAN("SIGN_DOCUMENT") "Sending hash to server...\n");
+        
+            #ifdef MESSAGE_FORMAT
+                printf(FORMAT("Sign Request") "[ SIGN_REQUEST (1) | HASH (%d) ] -> %d bytes\n", HASH_SIZE, 1 + HASH_SIZE);
+            #endif
         #endif
         
         ssize_t bytes_sent = clientConn->encSend((unsigned char*) m, HASH_SIZE + 1);
@@ -337,8 +346,7 @@ class SessionManager{
         }
 
         #ifdef COMPLETE_INFO
-        printf(CYAN("SIGN_DOCUMENT") "Waiting for signed response from server...\n");
-        printf(FORMAT("Sign Response") "[ STATUS (1) | HASH (%d) | TIMESTAMP (%d) | SIGNATURE (%d) ] -> %d bytes\n",HASH_SIZE, TS_SIZE, SIGNATURE_SIZE, 1 + HASH_SIZE + TS_SIZE + SIGNATURE_SIZE);
+            printf(CYAN("SIGN_DOCUMENT") "Waiting for signed response from server...\n");
         #endif
 
         ssize_t bytes_recv = clientConn->decRecv(buffer);
@@ -355,7 +363,10 @@ class SessionManager{
 
         #ifdef COMPLETE_INFO
 
-        printf(CYAN("SIGN_DOCUMENT") "Received %ld bytes\n", bytes_recv);
+            #ifdef MESSAGE_FORMAT
+                printf(FORMAT("Sign Response") "[ STATUS (1) | HASH (%d) | TIMESTAMP (%d) | SIGNATURE (%d) ] -> %d bytes\n",HASH_SIZE, TS_SIZE, SIGNATURE_SIZE, 1 + HASH_SIZE + TS_SIZE + SIGNATURE_SIZE);
+                printf(CYAN("SIGN_DOCUMENT") "Received %ld bytes\n", bytes_recv);
+            #endif
         
         #endif
 
@@ -364,7 +375,7 @@ class SessionManager{
 
         if(outcome == status::INVALID){
             printf(WARNING_MESS "All timestamps have been used\n");
-            return status::ERROR;
+            return status::INVALID;
         }
         else if(outcome == status::ERROR){
             printf(ERROR_MESS "Error occurred while receiving the signature\n");
