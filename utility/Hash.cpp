@@ -7,7 +7,7 @@ class Hash{
 
 public:
 
-    void calculateHash(const char* message, const int len,unsigned char* hash){
+    void calculateHash(const char* message, const int len, unsigned char* hash){
         
         unsigned int digest_len; 
         EVP_MD_CTX* ctx;

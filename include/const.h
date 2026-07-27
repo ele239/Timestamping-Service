@@ -83,7 +83,7 @@
 #define ERROR_MESS COLOR_RED "ERROR" COLOR_RESET ": "
 #define FORMAT(string) COLOR_AQUA "FORMAT " "(" COLOR_RESET string COLOR_AQUA ") => " COLOR_RESET
 
-#define COMPLETE_INFO
+//#define COMPLETE_INFO
 //#define MESSAGE_FORMAT
 
 using namespace std;
