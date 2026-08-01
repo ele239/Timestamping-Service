@@ -7,6 +7,9 @@
 #define DEFAULT_PORT 8080
 #define SERVER_ADDRESS "127.0.0.1"
 
+//Threads
+#define NUM_THREADS 10
+
 // User json path
 #define USER_CREDENTIALS_PATH "server/UserInfo/UserCredentials.json"
 

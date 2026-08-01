@@ -10,6 +10,8 @@
 #include <chrono>
 #include <stdlib.h>
 #include <mutex>
+#include <condition_variable>
+#include <queue>
 #include <vector>
 #include <fstream>
 #include <nlohmann/json.hpp>
